@@ -158,26 +158,28 @@ public static class SeedData
         };
 
     /// <summary>
-    /// Seeds representative sub-units for a handful of source materials if the units table is empty.
+    /// Seeds representative sub-units for a handful of source materials, inserting any seed units that are missing so
+    /// that databases created before a unit was added to the catalog still receive it.
     /// </summary>
     /// <param name="db">The database context used to insert seed data.</param>
     private static void SeedUnits(AppDbContext db)
     {
-        if (db.SourceMaterialUnits.Any())
-        {
-            return;
-        }
-
+        var existing = db.SourceMaterialUnits.Select(u => u.Id).ToHashSet();
         var now = DateTime.UtcNow;
-        var index = 0;
         foreach (var item in SeedUnitData)
         {
-            index++;
+            var id = UnitId(item.MaterialSequence, item.GroupNumber, item.Number);
+            if (existing.Contains(id))
+            {
+                continue;
+            }
+
             db.SourceMaterialUnits.Add(new SourceMaterialUnit
             {
-                Id = UnitId(item.MaterialSequence, item.Number),
+                Id = id,
                 SourceMaterialId = new Guid($"00000000-0000-0000-0000-{item.MaterialSequence:D12}"),
                 UnitType = item.UnitType,
+                GroupNumber = item.GroupNumber,
                 Number = item.Number,
                 Title = item.Title,
                 CreatedAtUtc = now
@@ -198,11 +200,11 @@ public static class SeedData
 
         var now = DateTime.UtcNow;
 
-        // Padme has watched three of the five seeded Clone Wars episodes while keeping the item In Progress.
+        // Padme has watched three of the seeded first-season Clone Wars episodes while keeping the item In Progress.
         db.UserSourceMaterialUnits.AddRange(
-            SeedProgress(PadmeUserId, 10, 1, true, now),
-            SeedProgress(PadmeUserId, 10, 2, true, now),
-            SeedProgress(PadmeUserId, 10, 3, true, now));
+            SeedProgress(PadmeUserId, 10, 1, 1, true, now),
+            SeedProgress(PadmeUserId, 10, 1, 2, true, now),
+            SeedProgress(PadmeUserId, 10, 1, 3, true, now));
     }
 
     /// <summary>
@@ -210,31 +212,35 @@ public static class SeedData
     /// </summary>
     /// <param name="userId">The identifier of the owning user.</param>
     /// <param name="materialSequence">The 1-based catalog sequence of the unit's source material.</param>
+    /// <param name="groupNumber">The group (season/volume) the unit belongs to, or <c>null</c> for ungrouped units.</param>
     /// <param name="number">The unit number being tracked.</param>
     /// <param name="isCompleted">Whether the unit is completed.</param>
     /// <param name="now">The timestamp used for the last-updated date.</param>
     /// <returns>A fully populated seed progress record.</returns>
-    private static UserSourceMaterialUnit SeedProgress(Guid userId, int materialSequence, int number, bool isCompleted, DateTime now) =>
+    private static UserSourceMaterialUnit SeedProgress(Guid userId, int materialSequence, int? groupNumber, int number, bool isCompleted, DateTime now) =>
         new()
         {
             UserId = userId,
-            SourceMaterialUnitId = UnitId(materialSequence, number),
+            SourceMaterialUnitId = UnitId(materialSequence, groupNumber, number),
             IsCompleted = isCompleted,
             UpdatedAtUtc = now
         };
 
     /// <summary>
-    /// Resolves the deterministic identifier of a seed unit from its source material sequence and number.
+    /// Resolves the deterministic identifier of a seed unit from its source material sequence, group, and number.
     /// </summary>
     /// <param name="materialSequence">The 1-based catalog sequence of the unit's source material.</param>
+    /// <param name="groupNumber">The group (season/volume) the unit belongs to, or <c>null</c> for ungrouped units.</param>
     /// <param name="number">The unit number.</param>
     /// <returns>The fixed identifier of the matching seed unit.</returns>
-    private static Guid UnitId(int materialSequence, int number)
+    private static Guid UnitId(int materialSequence, int? groupNumber, int number)
     {
         var index = 0;
         for (var i = 0; i < SeedUnitData.Length; i++)
         {
-            if (SeedUnitData[i].MaterialSequence == materialSequence && SeedUnitData[i].Number == number)
+            if (SeedUnitData[i].MaterialSequence == materialSequence &&
+                SeedUnitData[i].GroupNumber == groupNumber &&
+                SeedUnitData[i].Number == number)
             {
                 index = i;
                 break;
@@ -248,47 +254,87 @@ public static class SeedData
     /// Describes a seed unit and which source material it belongs to.
     /// </summary>
     /// <param name="MaterialSequence">The 1-based catalog sequence of the owning source material.</param>
+    /// <param name="GroupNumber">The group (season/volume) the unit belongs to, or <c>null</c> for ungrouped units.</param>
     /// <param name="UnitType">The kind of unit.</param>
-    /// <param name="Number">The unit's position within its source material.</param>
+    /// <param name="Number">The unit's position within its group or source material.</param>
     /// <param name="Title">The optional display title of the unit.</param>
-    private sealed record SeedUnitEntry(int MaterialSequence, UnitType UnitType, int Number, string? Title);
+    private sealed record SeedUnitEntry(int MaterialSequence, int? GroupNumber, UnitType UnitType, int Number, string? Title);
 
     /// <summary>
-    /// Gets the representative units to seed for a handful of source materials.
+    /// Gets the representative units to seed for a handful of source materials. Shows use their seasons as groups,
+    /// comics their volumes, and books and games have no group.
     /// </summary>
     private static readonly SeedUnitEntry[] SeedUnitData =
     [
-        // The Clone Wars (10)
-        new(10, UnitType.Episode, 1, null),
-        new(10, UnitType.Episode, 2, null),
-        new(10, UnitType.Episode, 3, null),
-        new(10, UnitType.Episode, 4, null),
-        new(10, UnitType.Episode, 5, null),
-        // The Mandalorian (12)
-        new(12, UnitType.Episode, 1, "Chapter 1: The Mandalorian"),
-        new(12, UnitType.Episode, 2, "Chapter 2: The Child"),
-        new(12, UnitType.Episode, 3, "Chapter 3: The Sin"),
-        new(12, UnitType.Episode, 4, "Chapter 4: Sanctuary"),
-        new(12, UnitType.Episode, 5, "Chapter 5: The Gunslinger"),
-        new(12, UnitType.Episode, 6, "Chapter 6: The Prisoner"),
-        new(12, UnitType.Episode, 7, "Chapter 7: The Reckoning"),
-        new(12, UnitType.Episode, 8, "Chapter 8: Redemption"),
-        // Ahsoka (13)
-        new(13, UnitType.Episode, 1, "Part One: Master and Apprentice"),
-        new(13, UnitType.Episode, 2, "Part Two: Toil and Trouble"),
-        new(13, UnitType.Episode, 3, "Part Three: Time to Fly"),
-        // Dawn of the Jedi (14)
-        new(14, UnitType.Issue, 1, null),
-        new(14, UnitType.Issue, 2, null),
-        new(14, UnitType.Issue, 3, null),
+        // The Clone Wars (10), seasons 1-7
+        new(10, 1, UnitType.Episode, 1, null),
+        new(10, 1, UnitType.Episode, 2, null),
+        new(10, 1, UnitType.Episode, 3, null),
+        new(10, 1, UnitType.Episode, 4, null),
+        new(10, 1, UnitType.Episode, 5, null),
+        new(10, 2, UnitType.Episode, 1, null),
+        new(10, 2, UnitType.Episode, 2, null),
+        new(10, 2, UnitType.Episode, 3, null),
+        new(10, 3, UnitType.Episode, 1, null),
+        new(10, 3, UnitType.Episode, 2, null),
+        new(10, 3, UnitType.Episode, 3, null),
+        new(10, 4, UnitType.Episode, 1, null),
+        new(10, 4, UnitType.Episode, 2, null),
+        new(10, 4, UnitType.Episode, 3, null),
+        new(10, 5, UnitType.Episode, 1, null),
+        new(10, 5, UnitType.Episode, 2, null),
+        new(10, 5, UnitType.Episode, 3, null),
+        new(10, 6, UnitType.Episode, 1, null),
+        new(10, 6, UnitType.Episode, 2, null),
+        new(10, 6, UnitType.Episode, 3, null),
+        new(10, 7, UnitType.Episode, 9, "Old Friends Not Forgotten"),
+        new(10, 7, UnitType.Episode, 10, "The Phantom Apprentice"),
+        new(10, 7, UnitType.Episode, 11, "Shattered"),
+        new(10, 7, UnitType.Episode, 12, "Victory and Death"),
+        // The Mandalorian (12), season 1
+        new(12, 1, UnitType.Episode, 1, "Chapter 1: The Mandalorian"),
+        new(12, 1, UnitType.Episode, 2, "Chapter 2: The Child"),
+        new(12, 1, UnitType.Episode, 3, "Chapter 3: The Sin"),
+        new(12, 1, UnitType.Episode, 4, "Chapter 4: Sanctuary"),
+        new(12, 1, UnitType.Episode, 5, "Chapter 5: The Gunslinger"),
+        new(12, 1, UnitType.Episode, 6, "Chapter 6: The Prisoner"),
+        new(12, 1, UnitType.Episode, 7, "Chapter 7: The Reckoning"),
+        new(12, 1, UnitType.Episode, 8, "Chapter 8: Redemption"),
+        // Ahsoka (13), season 1
+        new(13, 1, UnitType.Episode, 1, "Part One: Master and Apprentice"),
+        new(13, 1, UnitType.Episode, 2, "Part Two: Toil and Trouble"),
+        new(13, 1, UnitType.Episode, 3, "Part Three: Time to Fly"),
+        // Dawn of the Jedi (14), volume 1
+        new(14, 1, UnitType.Issue, 1, null),
+        new(14, 1, UnitType.Issue, 2, null),
+        new(14, 1, UnitType.Issue, 3, null),
         // Shatterpoint (19)
-        new(19, UnitType.Chapter, 1, null),
-        new(19, UnitType.Chapter, 2, null),
-        new(19, UnitType.Chapter, 3, null),
+        new(19, null, UnitType.Chapter, 1, null),
+        new(19, null, UnitType.Chapter, 2, null),
+        new(19, null, UnitType.Chapter, 3, null),
         // Star Wars Jedi: Fallen Order (22)
-        new(22, UnitType.Level, 1, null),
-        new(22, UnitType.Level, 2, null),
-        new(22, UnitType.Level, 3, null)
+        new(22, null, UnitType.Level, 1, null),
+        new(22, null, UnitType.Level, 2, null),
+        new(22, null, UnitType.Level, 3, null),
+        // Star Wars: Rebels (11), seasons 1-2
+        new(11, 1, UnitType.Episode, 1, "Spark of Rebellion"),
+        new(11, 1, UnitType.Episode, 2, "Droids in Distress"),
+        new(11, 1, UnitType.Episode, 3, "Fighter Flight"),
+        new(11, 2, UnitType.Episode, 1, "The Siege of Lothal"),
+        new(11, 2, UnitType.Episode, 2, "The Lost Commanders"),
+        new(11, 2, UnitType.Episode, 3, "Relics of the Old Republic"),
+        // Ahsoka (13), season 1
+        new(13, 1, UnitType.Episode, 4, "Part Four: Fallen Jedi"),
+        new(13, 1, UnitType.Episode, 5, "Part Five: Shadow Warrior"),
+        new(13, 1, UnitType.Episode, 6, "Part Six: Far, Far Away"),
+        // Dawn of the Jedi (14), volume 2
+        new(14, 2, UnitType.Issue, 1, null),
+        new(14, 2, UnitType.Issue, 2, null),
+        new(14, 2, UnitType.Issue, 3, null),
+        // The High Republic: Light of the Jedi (18)
+        new(18, null, UnitType.Chapter, 1, null),
+        new(18, null, UnitType.Chapter, 2, null),
+        new(18, null, UnitType.Chapter, 3, null)
     ];
 
     /// <summary>
@@ -343,6 +389,7 @@ public static class SeedData
     {
         if (db.SourceMaterialEvents.Any())
         {
+            ApplyEventUnitLinks(db);
             return;
         }
 
@@ -363,10 +410,46 @@ public static class SeedData
                 Year = item.Year,
                 DisplayDate = item.DisplayDate,
                 SourceMaterialId = new Guid($"00000000-0000-0000-0000-{item.MaterialSequence:D12}"),
+                SourceMaterialUnitId = item.UnitKey is { } unit
+                    ? UnitId(unit.MaterialSequence, unit.GroupNumber, unit.Number)
+                    : null,
                 EventCharacters = item.Characters.Select(name => new EventCharacter { CharacterId = characters[name] }).ToList(),
                 EventLocations = item.Locations.Select(name => new EventLocation { LocationId = locations[name] }).ToList(),
                 EventVehicles = item.Vehicles.Select(name => new EventVehicle { VehicleId = vehicles[name] }).ToList()
             });
+        }
+    }
+
+    /// <summary>
+    /// Back-fills the unit links on previously seeded events so databases created before the unit links existed
+    /// pick them up without being re-seeded. Existing links are left untouched.
+    /// </summary>
+    /// <param name="db">The database context used to update seed data.</param>
+    private static void ApplyEventUnitLinks(AppDbContext db)
+    {
+        var changed = false;
+        var index = 0;
+        foreach (var item in TimelineEvents)
+        {
+            index++;
+            if (item.UnitKey is not { } unit)
+            {
+                continue;
+            }
+
+            var id = new Guid($"00000000-0000-0000-0000-{400000000000 + index:D12}");
+            var existing = db.SourceMaterialEvents.Local.FirstOrDefault(e => e.Id == id)
+                ?? db.SourceMaterialEvents.FirstOrDefault(e => e.Id == id);
+            if (existing is not null && existing.SourceMaterialUnitId is null)
+            {
+                existing.SourceMaterialUnitId = UnitId(unit.MaterialSequence, unit.GroupNumber, unit.Number);
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            db.SaveChanges();
         }
     }
 
@@ -431,6 +514,8 @@ public static class SeedData
     /// <param name="Year">The numeric year of the event on the galactic timeline.</param>
     /// <param name="DisplayDate">The formatted display date of the event.</param>
     /// <param name="MaterialSequence">The 1-based catalog sequence of the source material the event is drawn from.</param>
+    /// <param name="UnitKey">The unit the event depicts (material sequence, group, number), or <c>null</c> when the
+    /// event covers the whole source material.</param>
     /// <param name="Characters">The names of the characters that appear in the event.</param>
     /// <param name="Locations">The names of the locations the event takes place in.</param>
     /// <param name="Vehicles">The names of the vehicles that appear in the event.</param>
@@ -441,6 +526,7 @@ public static class SeedData
         int Year,
         string DisplayDate,
         int MaterialSequence,
+        (int MaterialSequence, int? GroupNumber, int Number)? UnitKey,
         string[] Characters,
         string[] Locations,
         string[] Vehicles);
@@ -457,6 +543,7 @@ public static class SeedData
             -25000,
             "c. 25,000 BBY",
             14,
+            (14, 1, 1),
             ["The Prime Jedi", "Rusk"],
             ["Tython"],
             []),
@@ -467,6 +554,7 @@ public static class SeedData
             -3954,
             "c. 3,954 BBY",
             15,
+            null,
             ["Revan", "Scourge", "The Sith Emperor"],
             ["Dromund Kaas", "Coruscant"],
             ["Ebon Hawk", "Interdictor-class cruiser"]),
@@ -477,6 +565,7 @@ public static class SeedData
             -1000,
             "c. 1,000 BBY",
             16,
+            null,
             ["Darth Bane", "Lord Kaan"],
             ["Ruusan", "Coruscant"],
             ["Acclamator-class assault ship"]),
@@ -487,6 +576,7 @@ public static class SeedData
             -32,
             "32 BBY",
             1,
+            null,
             ["Qui-Gon Jinn", "Obi-Wan Kenobi", "Padme Amidala", "Darth Maul"],
             ["Naboo", "Otoh Gunga", "Theed"],
             ["Radiant VII", "Sith Infiltrator", "Naboo N-1 starfighter"]),
@@ -497,6 +587,7 @@ public static class SeedData
             -22,
             "22 BBY",
             2,
+            null,
             ["Anakin Skywalker", "Obi-Wan Kenobi", "Padme Amidala", "Yoda", "Count Dooku"],
             ["Geonosis", "Petranaki arena"],
             ["LAAT/i gunship", "Acclamator-class assault ship", "Droid control ship"]),
@@ -507,6 +598,7 @@ public static class SeedData
             -19,
             "19 BBY",
             10,
+            (10, 7, 9),
             ["Ahsoka Tano", "Bo-Katan Kryze", "Darth Maul"],
             ["Mandalore", "Sundari"],
             ["The Tribunal", "LAAT/i gunship", "Gauntlet fighter"]),
@@ -517,6 +609,7 @@ public static class SeedData
             -19,
             "19 BBY",
             3,
+            null,
             ["Emperor Palpatine", "Anakin Skywalker", "Mace Windu", "The Jedi Order"],
             ["Coruscant", "Utapau", "Mygeeto", "Felucia", "Kashyyyk"],
             ["Venator-class Star Destroyer", "LAAT/i gunship"]),
@@ -527,6 +620,7 @@ public static class SeedData
             0,
             "0 BBY",
             4,
+            null,
             ["Princess Leia Organa", "Grand Moff Tarkin"],
             ["Alderaan", "Alderaan system"],
             ["Death Star", "Tantive IV"]),
@@ -537,6 +631,7 @@ public static class SeedData
             0,
             "0 BBY",
             4,
+            null,
             ["Luke Skywalker", "Han Solo", "Princess Leia Organa", "Darth Vader"],
             ["Yavin Prime", "Yavin 4"],
             ["Millennium Falcon", "Death Star", "T-65 X-wing starfighter", "TIE/LN fighter"]),
@@ -547,6 +642,7 @@ public static class SeedData
             3,
             "3 ABY",
             5,
+            null,
             ["Luke Skywalker", "Han Solo", "Princess Leia Organa", "Darth Vader"],
             ["Hoth", "Echo Base"],
             ["AT-AT walker", "T-47 snowspeeder", "Executor"]),
@@ -557,6 +653,7 @@ public static class SeedData
             4,
             "4 ABY",
             6,
+            null,
             ["Luke Skywalker", "Han Solo", "Princess Leia Organa", "Darth Vader", "Emperor Palpatine"],
             ["Endor", "Death Star II"],
             ["Millennium Falcon", "Death Star II", "Executor", "A-wing starfighter"]),
@@ -567,6 +664,7 @@ public static class SeedData
             9,
             "9 ABY",
             12,
+            (12, 1, 8),
             ["Din Djarin", "Grogu", "Bo-Katan Kryze", "Moff Gideon"],
             ["Nevarro", "Gideon light cruiser"],
             ["Razor Crest", "Arquitens-class light cruiser"]),
@@ -577,6 +675,7 @@ public static class SeedData
             35,
             "35 ABY",
             9,
+            null,
             ["Rey", "Ben Solo", "Emperor Palpatine", "Lando Calrissian", "Poe Dameron"],
             ["Exegol", "Kijimi"],
             ["T-70 X-wing starfighter", "TIE whisper", "Xyston-class Star Destroyer"]),
@@ -587,8 +686,86 @@ public static class SeedData
             40,
             "40 ABY",
             20,
+            null,
             ["Jacen Solo", "Jaina Solo", "Luke Skywalker", "Mara Jade Skywalker"],
             ["Coruscant", "Kashyyyk"],
-            ["Imperial-class Star Destroyer", "StealthX starfighter"])
+            ["Imperial-class Star Destroyer", "StealthX starfighter"]),
+        new(
+            "The Great Hyperspace Disaster",
+            "The freighter Legacy Run is destroyed in hyperspace, hurling a deadly wave of debris toward the Outer Rim and forcing the Jedi into a desperate rescue effort.",
+            CanonType.Canon,
+            -232,
+            "232 BBY",
+            18,
+            (18, null, 1),
+            ["Chancellor Lina Soh", "Avar Kriss"],
+            ["Hetzal Prime", "Legacy Run debris field"],
+            ["Legacy Run"]),
+        new(
+            "The Descent of the Je'daii",
+            "An ancient darkness stirs on Tython as betrayal splinters the Je'daii, forcing the order to confront the line between light and dark.",
+            CanonType.Legends,
+            -25700,
+            "c. 25,700 BBY",
+            14,
+            (14, 2, 1),
+            ["Ryo Chuchi", "Xesh"],
+            ["Tython", "The Abyss"],
+            []),
+        new(
+            "The Holocron Heist",
+            "Cad Bane infiltrates the Jedi Temple to steal a memory crystal, outwitting the Order's defenses and escaping with Anakin Skywalker in pursuit.",
+            CanonType.Canon,
+            -22,
+            "22 BBY",
+            10,
+            (10, 2, 1),
+            ["Anakin Skywalker", "Cad Bane", "Obi-Wan Kenobi"],
+            ["Coruscant", "Jedi Temple"],
+            ["Xanadu Blood"]),
+        new(
+            "The Battle of Lothal",
+            "The Ghost crew faces the full might of the Empire when Darth Vader arrives on Lothal to crush the growing rebellion.",
+            CanonType.Canon,
+            -4,
+            "4 BBY",
+            11,
+            (11, 2, 1),
+            ["Kanan Jarrus", "Ezra Bridger", "Hera Syndulla", "Darth Vader"],
+            ["Lothal", "Capital City"],
+            ["Ghost", "TIE/LN fighter"]),
+        new(
+            "The Search for Thrawn",
+            "Ahsoka Tano and Sabine Wren journey to the distant world of Seatos, where an ancient map may reveal the path to the lost Grand Admiral Thrawn.",
+            CanonType.Canon,
+            9,
+            "9 ABY",
+            13,
+            (13, 1, 6),
+            ["Ahsoka Tano", "Sabine Wren", "Baylan Skoll", "Morgan Elsbeth"],
+            ["Seatos"],
+            ["Starwhale"]),
+        new(
+            "The Wounded Jedi",
+            "Mace Windu returns to the jungle world of Haruun Kal to find his lost apprentice, walking into a brutal war that tests the very limits of his power.",
+            CanonType.Legends,
+            -22,
+            "22 BBY",
+            19,
+            (19, null, 1),
+            ["Mace Windu", "Depa Billaba", "Nick Rostu"],
+            ["Haruun Kal", "Pelek Baw"],
+            ["Delta-7 Aethersprite starfighter"]),
+        new(
+            "The Fall of Bracca",
+            "Hunted by Imperial Inquisitors, Cal Kestis is forced to reveal his connection to the Force to escape the scrapyard world of Bracca.",
+            CanonType.Canon,
+            -14,
+            "14 BBY",
+            22,
+            (22, null, 1),
+            ["Cal Kestis", "Cere Junda", "BD-1"],
+            ["Bracca"],
+            ["The Mantis"])
     ];
 }

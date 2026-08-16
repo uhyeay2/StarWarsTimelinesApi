@@ -8,10 +8,11 @@ namespace StarWarsTimelines.Application.Dtos;
 /// </summary>
 /// <param name="Id">The unique identifier of the unit.</param>
 /// <param name="UnitType">The kind of unit (episode, chapter, issue, or level).</param>
-/// <param name="Number">The unit's position within its source material.</param>
+/// <param name="GroupNumber">The group the unit belongs to (season for a show, volume for a comic), or <c>null</c>.</param>
+/// <param name="Number">The unit's position within its group or source material.</param>
 /// <param name="Title">The optional display title of the unit.</param>
 /// <param name="IsCompleted">A value indicating whether the user has completed the unit.</param>
-public record LibraryUnitResponse(Guid Id, UnitType UnitType, int Number, string? Title, bool IsCompleted)
+public record LibraryUnitResponse(Guid Id, UnitType UnitType, int? GroupNumber, int Number, string? Title, bool IsCompleted)
 {
     /// <summary>
     /// Maps a <see cref="SourceMaterialUnit"/> entity and the user's progress flag to a response DTO.
@@ -20,5 +21,5 @@ public record LibraryUnitResponse(Guid Id, UnitType UnitType, int Number, string
     /// <param name="isCompleted">The requesting user's completion state for the unit.</param>
     /// <returns>A <see cref="LibraryUnitResponse"/> populated from the entity.</returns>
     public static LibraryUnitResponse FromEntity(SourceMaterialUnit item, bool isCompleted) =>
-        new(item.Id, item.UnitType, item.Number, item.Title, isCompleted);
+        new(item.Id, item.UnitType, item.GroupNumber, item.Number, item.Title, isCompleted);
 }

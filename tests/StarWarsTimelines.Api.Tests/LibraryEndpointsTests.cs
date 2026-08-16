@@ -19,8 +19,8 @@ public sealed class LibraryEndpointsTests : ApiTestBase
     private static readonly Guid MandalorianId = new("00000000-0000-0000-0000-000000000012");
     private static readonly Guid CloneWarsUnitOneId = new("00000000-0000-0000-0000-500000000001");
     private static readonly Guid CloneWarsUnitFiveId = new("00000000-0000-0000-0000-500000000005");
-    private static readonly Guid MandalorianUnitOneId = new("00000000-0000-0000-0000-500000000006");
-    private static readonly Guid FallenOrderUnitOneId = new("00000000-0000-0000-0000-500000000023");
+    private static readonly Guid MandalorianUnitOneId = new("00000000-0000-0000-0000-500000000025");
+    private static readonly Guid FallenOrderUnitOneId = new("00000000-0000-0000-0000-500000000042");
 
     public LibraryEndpointsTests(StarWarsTimelinesApiFactory factory) : base(factory)
     {
@@ -203,8 +203,9 @@ public sealed class LibraryEndpointsTests : ApiTestBase
         var items = await response.Content.ReadFromJsonAsync<List<LibraryItemResponse>>();
 
         var cloneWars = Assert.Single(items!, x => x.SourceMaterialId == CloneWarsId);
-        Assert.Equal(5, cloneWars.Units.Count);
-        Assert.Equal(Enumerable.Range(1, 5), cloneWars.Units.Select(x => x.Number));
+        Assert.Equal(24, cloneWars.Units.Count);
+        Assert.Equal(Enumerable.Range(1, 5), cloneWars.Units.Take(5).Select(x => x.Number));
+        Assert.All(cloneWars.Units.Take(5), x => Assert.Equal(1, x.GroupNumber));
         Assert.True(cloneWars.Units[0].IsCompleted);
         Assert.True(cloneWars.Units[1].IsCompleted);
         Assert.True(cloneWars.Units[2].IsCompleted);
@@ -316,9 +317,9 @@ public sealed class LibraryEndpointsTests : ApiTestBase
     {
         var client = await CreateStandardClientAsync();
 
-        for (var number = 1; number <= 5; number++)
+        for (var number = 1; number <= 24; number++)
         {
-            var unitId = new Guid($"00000000-0000-0000-0000-50000000000{number}");
+            var unitId = new Guid($"00000000-0000-0000-0000-5000000000{number:D2}");
             var response = await client.PutAsJsonAsync(
                 $"/api/users/{PadmeId}/source-materials/{CloneWarsId}/units/{unitId}",
                 new UpdateUnitProgressRequest(true));

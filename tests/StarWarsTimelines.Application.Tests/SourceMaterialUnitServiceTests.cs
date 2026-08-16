@@ -77,7 +77,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterial?)null);
 
-        var result = await _service.CreateAsync(Guid.NewGuid(), new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, null));
+        var result = await _service.CreateAsync(Guid.NewGuid(), new CreateSourceMaterialUnitRequest(UnitType.Episode, null, 1, null));
 
         Assert.Null(result);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -91,10 +91,10 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(source);
         _repository
-            .Setup(x => x.GetByNumberAsync(source.Id, 1, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByNumberAsync(source.Id, null, 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterialUnit?)null);
 
-        var result = await _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, "   "));
+        var result = await _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, null, 1, "   "));
 
         Assert.NotNull(result);
         Assert.Null(result!.Title);
@@ -113,11 +113,11 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(source);
         _repository
-            .Setup(x => x.GetByNumberAsync(source.Id, 1, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByNumberAsync(source.Id, null, 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, null)));
+            _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, null, 1, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -130,7 +130,80 @@ public sealed class SourceMaterialUnitServiceTests
             .ReturnsAsync(source);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 0, null)));
+            _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, null, 0, null)));
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithGroupNumber_StoresGroup()
+    {
+        var source = Source();
+        _catalog
+            .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(source);
+        _repository
+            .Setup(x => x.GetByNumberAsync(source.Id, 1, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SourceMaterialUnit?)null);
+
+        var result = await _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 1, null));
+
+        Assert.NotNull(result);
+        Assert.Equal(1, result!.GroupNumber);
+        Assert.Equal(1, result.Number);
+        _repository.Verify(
+            x => x.AddAsync(It.Is<SourceMaterialUnit>(u => u.GroupNumber == 1 && u.Number == 1), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithDuplicateNumberInSameGroup_Throws()
+    {
+        var source = Source();
+        var existing = Unit(source.Id, 1);
+        existing.GroupNumber = 1;
+        _catalog
+            .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(source);
+        _repository
+            .Setup(x => x.GetByNumberAsync(source.Id, 1, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 1, null)));
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithDuplicateNumberInDifferentGroup_IsAllowed()
+    {
+        var source = Source();
+        var existing = Unit(source.Id, 1);
+        existing.GroupNumber = 1;
+        _catalog
+            .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(source);
+        _repository
+            .Setup(x => x.GetByNumberAsync(source.Id, 2, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SourceMaterialUnit?)null);
+
+        var result = await _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 2, 1, null));
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.GroupNumber);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithGroupNumberLessThanOne_Throws()
+    {
+        var source = Source();
+        _catalog
+            .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(source);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 0, 1, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -142,10 +215,10 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(source);
         _repository
-            .Setup(x => x.GetByNumberAsync(source.Id, 1, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByNumberAsync(source.Id, null, 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterialUnit?)null);
 
-        var result = await _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, "Chapter 1"));
+        var result = await _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, null, 1, "Chapter 1"));
 
         Assert.NotNull(result);
         Assert.Equal(source.Id, result!.SourceMaterialId);
@@ -162,7 +235,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterialUnit?)null);
 
-        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateSourceMaterialUnitRequest(null, null, null));
+        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateSourceMaterialUnitRequest(null, null, null, null));
 
         Assert.Null(result);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -177,10 +250,10 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
         _repository
-            .Setup(x => x.GetByNumberAsync(source.Id, 2, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByNumberAsync(source.Id, null, 2, It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterialUnit?)null);
 
-        var result = await _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(UnitType.Chapter, 2, "Renamed"));
+        var result = await _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(UnitType.Chapter, null, 2, "Renamed"));
 
         Assert.NotNull(result);
         Assert.Equal(UnitType.Chapter, result!.UnitType);
@@ -199,10 +272,10 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
         _repository
-            .Setup(x => x.GetByNumberAsync(source.Id, 1, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByNumberAsync(source.Id, null, 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        var result = await _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, 1, "Title"));
+        var result = await _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, null, 1, "Title"));
 
         Assert.NotNull(result);
         Assert.Equal(1, result!.Number);
@@ -219,12 +292,53 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
         _repository
-            .Setup(x => x.GetByNumberAsync(source.Id, 2, It.IsAny<CancellationToken>()))
+            .Setup(x => x.GetByNumberAsync(source.Id, null, 2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(other);
 
         await Assert.ThrowsAsync<ArgumentException>(() =>
-            _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, 2, null)));
+            _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, null, 2, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenDuplicateInTargetGroup_Throws()
+    {
+        var source = Source();
+        var item = Unit(source.Id, 1);
+        item.GroupNumber = 1;
+        var other = Unit(source.Id, 2);
+        other.GroupNumber = 2;
+        _repository
+            .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        _repository
+            .Setup(x => x.GetByNumberAsync(source.Id, 2, 2, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(other);
+
+        await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, 2, 2, null)));
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WhenMovingGroup_KeepsOwnNumber()
+    {
+        var source = Source();
+        var item = Unit(source.Id, 1);
+        item.GroupNumber = 1;
+        _repository
+            .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        _repository
+            .Setup(x => x.GetByNumberAsync(source.Id, 2, 1, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((SourceMaterialUnit?)null);
+
+        var result = await _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, 2, null, null));
+
+        Assert.NotNull(result);
+        Assert.Equal(2, result!.GroupNumber);
+        Assert.Equal(1, result.Number);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

@@ -10,6 +10,7 @@ public sealed class SourceMaterialEventServiceTests
 {
     private readonly Mock<ISourceMaterialEventRepository> _repository;
     private readonly Mock<ISourceMaterialRepository> _catalog;
+    private readonly Mock<ISourceMaterialUnitRepository> _units;
     private readonly Mock<ICharacterRepository> _characters;
     private readonly Mock<ILocationRepository> _locations;
     private readonly Mock<IVehicleRepository> _vehicles;
@@ -20,6 +21,7 @@ public sealed class SourceMaterialEventServiceTests
     {
         _repository = new Mock<ISourceMaterialEventRepository>();
         _catalog = new Mock<ISourceMaterialRepository>();
+        _units = new Mock<ISourceMaterialUnitRepository>();
         _characters = new Mock<ICharacterRepository>();
         _locations = new Mock<ILocationRepository>();
         _vehicles = new Mock<IVehicleRepository>();
@@ -27,6 +29,7 @@ public sealed class SourceMaterialEventServiceTests
         _service = new SourceMaterialEventService(
             _repository.Object,
             _catalog.Object,
+            _units.Object,
             _characters.Object,
             _locations.Object,
             _vehicles.Object,
@@ -108,7 +111,7 @@ public sealed class SourceMaterialEventServiceTests
     [InlineData("   ")]
     public async Task CreateAsync_WithInvalidTitle_Throws(string? title)
     {
-        var request = new CreateSourceMaterialEventRequest(title!, "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), [], [], []);
+        var request = new CreateSourceMaterialEventRequest(title!, "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), null, [], [], []);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
 
@@ -118,7 +121,7 @@ public sealed class SourceMaterialEventServiceTests
     [Fact]
     public async Task CreateAsync_WhenSourceMaterialMissing_Throws()
     {
-        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), [], [], []);
+        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), null, [], [], []);
         _catalog
             .Setup(x => x.GetByIdAsync(request.SourceMaterialId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterial?)null);
@@ -133,7 +136,7 @@ public sealed class SourceMaterialEventServiceTests
     {
         var source = Source();
         var missingCharacterId = Guid.NewGuid();
-        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, [missingCharacterId], [], []);
+        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, null, [missingCharacterId], [], []);
         _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
         _characters.Setup(x => x.GetByIdAsync(missingCharacterId, It.IsAny<CancellationToken>())).ReturnsAsync((Character?)null);
 
@@ -147,7 +150,7 @@ public sealed class SourceMaterialEventServiceTests
     {
         var source = Source();
         var missingLocationId = Guid.NewGuid();
-        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, [], [missingLocationId], []);
+        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, null, [], [missingLocationId], []);
         _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
         _locations.Setup(x => x.GetByIdAsync(missingLocationId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
 
@@ -161,13 +164,75 @@ public sealed class SourceMaterialEventServiceTests
     {
         var source = Source();
         var missingVehicleId = Guid.NewGuid();
-        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, [], [], [missingVehicleId]);
+        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, null, [], [], [missingVehicleId]);
         _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
         _vehicles.Setup(x => x.GetByIdAsync(missingVehicleId, It.IsAny<CancellationToken>())).ReturnsAsync((Vehicle?)null);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenUnitMissing_Throws()
+    {
+        var source = Source();
+        var missingUnitId = Guid.NewGuid();
+        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, missingUnitId, [], [], []);
+        _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
+        _units.Setup(x => x.GetByIdAsync(missingUnitId, It.IsAny<CancellationToken>())).ReturnsAsync((SourceMaterialUnit?)null);
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+
+        _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WhenUnitBelongsToAnotherMaterial_Throws()
+    {
+        var source = Source();
+        var unitId = Guid.NewGuid();
+        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, unitId, [], [], []);
+        _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
+        _units
+            .Setup(x => x.GetByIdAsync(unitId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SourceMaterialUnit { Id = unitId, SourceMaterialId = Guid.NewGuid() });
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+
+        _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithValidUnitLink_SetsUnitId()
+    {
+        var source = Source();
+        var unitId = Guid.NewGuid();
+        var unit = new SourceMaterialUnit { Id = unitId, SourceMaterialId = source.Id, UnitType = UnitType.Episode, GroupNumber = 1, Number = 1 };
+        var request = new CreateSourceMaterialEventRequest("Title", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, unitId, [], [], []);
+        _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
+        _units.Setup(x => x.GetByIdAsync(unitId, It.IsAny<CancellationToken>())).ReturnsAsync(unit);
+        var created = new SourceMaterialEvent
+        {
+            Id = Guid.NewGuid(),
+            Title = request.Title,
+            Description = request.Description,
+            CanonType = request.CanonType,
+            Year = request.Year,
+            DisplayDate = request.DisplayDate,
+            SourceMaterial = source,
+            SourceMaterialUnitId = unitId,
+            SourceMaterialUnit = unit
+        };
+        _repository.Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync(created);
+
+        var result = await _service.CreateAsync(request);
+
+        Assert.Equal(unitId, result.SourceMaterialUnit!.Id);
+        _repository.Verify(
+            x => x.AddAsync(It.Is<SourceMaterialEvent>(e => e.SourceMaterialUnitId == unitId), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -185,6 +250,7 @@ public sealed class SourceMaterialEventServiceTests
             "0 BBY",
             null,
             source.Id,
+            null,
             [characterId],
             [locationId],
             [vehicleId]);
@@ -228,7 +294,7 @@ public sealed class SourceMaterialEventServiceTests
             .Setup(x => x.GetByIdTrackedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterialEvent?)null);
 
-        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, null, null, null, null));
+        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, null, null, null, null, null));
 
         Assert.Null(result);
     }
@@ -261,7 +327,7 @@ public sealed class SourceMaterialEventServiceTests
 
         var result = await _service.UpdateAsync(
             existing.Id,
-            new UpdateSourceMaterialEventRequest("New title", "New description", CanonType.Legends, 5, "5 ABY", "6 ABY", source.Id, [characterId], null, null));
+            new UpdateSourceMaterialEventRequest("New title", "New description", CanonType.Legends, 5, "5 ABY", "6 ABY", source.Id, null, [characterId], null, null));
 
         Assert.NotNull(result);
         Assert.Equal("New title", result.Title);
@@ -280,7 +346,55 @@ public sealed class SourceMaterialEventServiceTests
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(
             existing.Id,
-            new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, Guid.NewGuid(), null, null, null)));
+            new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, Guid.NewGuid(), null, null, null, null)));
+
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithValidUnitLink_SetsUnitId()
+    {
+        var source = Source();
+        var existing = Event();
+        existing.SourceMaterialId = source.Id;
+        var unitId = Guid.NewGuid();
+        var unit = new SourceMaterialUnit { Id = unitId, SourceMaterialId = source.Id, UnitType = UnitType.Episode, GroupNumber = 1, Number = 1 };
+        _repository.Setup(x => x.GetByIdTrackedAsync(existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _units.Setup(x => x.GetByIdAsync(unitId, It.IsAny<CancellationToken>())).ReturnsAsync(unit);
+        _repository
+            .Setup(x => x.GetByIdAsync(existing.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new SourceMaterialEvent
+            {
+                Id = existing.Id,
+                Title = existing.Title,
+                SourceMaterial = source,
+                SourceMaterialUnitId = unitId,
+                SourceMaterialUnit = unit
+            });
+
+        var result = await _service.UpdateAsync(
+            existing.Id,
+            new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, null, unitId, null, null, null));
+
+        Assert.NotNull(result);
+        Assert.Equal(unitId, result!.SourceMaterialUnit!.Id);
+        Assert.Equal(unitId, existing.SourceMaterialUnitId);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithUnitBelongingToAnotherMaterial_Throws()
+    {
+        var existing = Event();
+        var unitId = Guid.NewGuid();
+        _repository.Setup(x => x.GetByIdTrackedAsync(existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
+        _units
+            .Setup(x => x.GetByIdAsync(unitId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SourceMaterialUnit { Id = unitId, SourceMaterialId = Guid.NewGuid() });
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(
+            existing.Id,
+            new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, null, unitId, null, null, null)));
 
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -293,7 +407,7 @@ public sealed class SourceMaterialEventServiceTests
 
         await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(
             existing.Id,
-            new UpdateSourceMaterialEventRequest("   ", null, null, null, null, null, null, null, null, null)));
+            new UpdateSourceMaterialEventRequest("   ", null, null, null, null, null, null, null, null, null, null)));
 
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

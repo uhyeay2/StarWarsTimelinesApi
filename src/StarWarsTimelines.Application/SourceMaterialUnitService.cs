@@ -50,7 +50,8 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
         }
 
         ValidateNumber(request.Number);
-        if (await _repository.GetByNumberAsync(sourceMaterialId, request.Number, cancellationToken) is not null)
+        ValidateGroupNumber(request.GroupNumber);
+        if (await _repository.GetByNumberAsync(sourceMaterialId, request.GroupNumber, request.Number, cancellationToken) is not null)
         {
             throw new ArgumentException($"Unit '{request.Number}' already exists for this source material.", nameof(request.Number));
         }
@@ -60,6 +61,7 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
             Id = Guid.NewGuid(),
             SourceMaterialId = sourceMaterialId,
             UnitType = request.UnitType,
+            GroupNumber = request.GroupNumber,
             Number = request.Number,
             Title = NormalizeTitle(request.Title),
             CreatedAtUtc = DateTime.UtcNow
@@ -85,16 +87,25 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
             item.UnitType = unitType;
         }
 
-        if (request.Number is int number)
+        if (request.Number is int number || request.GroupNumber is not null)
         {
-            ValidateNumber(number);
-            var existing = await _repository.GetByNumberAsync(item.SourceMaterialId, number, cancellationToken);
-            if (existing is not null && existing.Id != item.Id)
+            var targetGroup = request.GroupNumber ?? item.GroupNumber;
+            var targetNumber = request.Number ?? item.Number;
+            ValidateGroupNumber(targetGroup);
+
+            if (request.Number is int nextNumber)
             {
-                throw new ArgumentException($"Unit '{number}' already exists for this source material.", nameof(request.Number));
+                ValidateNumber(nextNumber);
             }
 
-            item.Number = number;
+            var existing = await _repository.GetByNumberAsync(item.SourceMaterialId, targetGroup, targetNumber, cancellationToken);
+            if (existing is not null && existing.Id != item.Id)
+            {
+                throw new ArgumentException($"Unit '{targetNumber}' already exists for this source material.", nameof(request.Number));
+            }
+
+            item.GroupNumber = targetGroup;
+            item.Number = targetNumber;
         }
 
         if (request.Title is not null)
@@ -133,6 +144,19 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
         if (number < 1)
         {
             throw new ArgumentException("Unit number must be at least 1.", nameof(number));
+        }
+    }
+
+    /// <summary>
+    /// Ensures the group number, when present, is a positive integer.
+    /// </summary>
+    /// <param name="groupNumber">The group number to validate, or <c>null</c>.</param>
+    /// <exception cref="ArgumentException">Thrown when the group number is less than 1.</exception>
+    private static void ValidateGroupNumber(int? groupNumber)
+    {
+        if (groupNumber is < 1)
+        {
+            throw new ArgumentException("Group number must be at least 1.", nameof(groupNumber));
         }
     }
 

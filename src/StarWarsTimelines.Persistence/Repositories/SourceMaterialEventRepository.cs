@@ -8,9 +8,9 @@ namespace StarWarsTimelines.Persistence.Repositories;
 /// EF Core-backed implementation of <see cref="ISourceMaterialEventRepository"/>.
 /// </summary>
 /// <remarks>
-/// Read queries use <c>AsNoTracking()</c> and always include the source material and every linked character,
-/// location, and vehicle so responses can be built without additional queries. The tracked read is only used when
-/// an event's link collections must be edited and saved.
+/// Read queries use <c>AsNoTracking()</c> and always include the source material (and its specific unit when linked)
+/// and every linked character, location, and vehicle so responses can be built without additional queries. The
+/// tracked read is only used when an event's link collections must be edited and saved.
 /// </remarks>
 public sealed class SourceMaterialEventRepository : ISourceMaterialEventRepository
 {
@@ -63,6 +63,7 @@ public sealed class SourceMaterialEventRepository : ISourceMaterialEventReposito
 
         return query
             .Include(x => x.SourceMaterial)
+            .Include(x => x.SourceMaterialUnit)
             .Include(x => x.EventCharacters).ThenInclude(x => x.Character)
             .Include(x => x.EventLocations).ThenInclude(x => x.Location)
             .Include(x => x.EventVehicles).ThenInclude(x => x.Vehicle);

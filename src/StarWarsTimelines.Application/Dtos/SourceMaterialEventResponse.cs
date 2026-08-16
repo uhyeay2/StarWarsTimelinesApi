@@ -15,6 +15,8 @@ namespace StarWarsTimelines.Application.Dtos;
 /// <param name="DisplayDate">The formatted display date of the event.</param>
 /// <param name="DisplayDateEnd">The formatted display date marking the end of the event's span, or <c>null</c>.</param>
 /// <param name="SourceMaterial">The source material the event is drawn from.</param>
+/// <param name="SourceMaterialUnit">The specific sub-unit the event depicts, or <c>null</c> when the event covers the
+/// whole source material.</param>
 /// <param name="Characters">The characters that appear in the event.</param>
 /// <param name="Locations">The locations the event takes place in.</param>
 /// <param name="Vehicles">The vehicles that appear in the event.</param>
@@ -27,6 +29,7 @@ public record SourceMaterialEventResponse(
     string DisplayDate,
     string? DisplayDateEnd,
     SourceMaterialResponse SourceMaterial,
+    SourceMaterialUnitResponse? SourceMaterialUnit,
     IReadOnlyList<CharacterResponse> Characters,
     IReadOnlyList<LocationResponse> Locations,
     IReadOnlyList<VehicleResponse> Vehicles)
@@ -45,6 +48,7 @@ public record SourceMaterialEventResponse(
         item.DisplayDate,
         item.DisplayDateEnd,
         SourceMaterialResponse.FromEntity(item.SourceMaterial),
+        item.SourceMaterialUnit is null ? null : SourceMaterialUnitResponse.FromEntity(item.SourceMaterialUnit),
         item.EventCharacters.Select(x => CharacterResponse.FromEntity(x.Character)).OrderBy(x => x.Name).ToList(),
         item.EventLocations.Select(x => LocationResponse.FromEntity(x.Location)).OrderBy(x => x.Name).ToList(),
         item.EventVehicles.Select(x => VehicleResponse.FromEntity(x.Vehicle)).OrderBy(x => x.Name).ToList());

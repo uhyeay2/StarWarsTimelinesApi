@@ -17,8 +17,10 @@ public sealed class SourceMaterialUnitConfiguration : IEntityTypeConfiguration<S
         builder.Property(x => x.UnitType).HasConversion<string>().HasMaxLength(50);
         builder.Property(x => x.Title).HasMaxLength(200);
 
-        // A material can have at most one unit per number, so its ordering is unambiguous.
-        builder.HasIndex(x => new { x.SourceMaterialId, x.Number }).IsUnique();
+        // A material can have at most one unit per number within a group (season/volume). The group is null for
+        // materials released without groups; SQLite treats nulls as distinct in unique indexes, so the duplicate
+        // check is also enforced in the service layer.
+        builder.HasIndex(x => new { x.SourceMaterialId, x.GroupNumber, x.Number }).IsUnique();
 
         builder.HasOne(x => x.SourceMaterial)
             .WithMany(material => material.SourceMaterialUnits)

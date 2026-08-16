@@ -136,9 +136,9 @@ public static class LibraryEndpoints
                 true,
                 new List<LibraryUnitResponse>
                 {
-                    new(new Guid("00000000-0000-0000-0000-500000000001"), UnitType.Episode, 1, null, true),
-                    new(new Guid("00000000-0000-0000-0000-500000000002"), UnitType.Episode, 2, null, true),
-                    new(new Guid("00000000-0000-0000-0000-500000000003"), UnitType.Episode, 3, null, true)
+                    new(new Guid("00000000-0000-0000-0000-500000000001"), UnitType.Episode, 1, 1, null, true),
+                    new(new Guid("00000000-0000-0000-0000-500000000002"), UnitType.Episode, 1, 2, null, true),
+                    new(new Guid("00000000-0000-0000-0000-500000000003"), UnitType.Episode, 1, 3, null, true)
                 })),
             (StatusCodes.Status400BadRequest, "Invalid status", "The status cannot be set on a source material that has sub-units.", ExampleValues.BadRequest("The status is derived from unit progress and cannot be set directly.")),
             (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can modify a library.", ExampleValues.Forbidden("The caller does not own this library.")),
@@ -165,7 +165,7 @@ public static class LibraryEndpoints
             ("Mark complete", "Sets the unit as completed.", new UpdateUnitProgressRequest(true)),
             ("Mark incomplete", "Resets the unit progress.", new UpdateUnitProgressRequest(false)))
         .WithResponseExamples(
-            (StatusCodes.Status200OK, "Progress updated", "The unit with the updated progress flag.", new LibraryUnitResponse(new Guid("00000000-0000-0000-0000-500000000004"), UnitType.Episode, 4, null, true)),
+            (StatusCodes.Status200OK, "Progress updated", "The unit with the updated progress flag.", new LibraryUnitResponse(new Guid("00000000-0000-0000-0000-500000000004"), UnitType.Episode, 1, 4, null, true)),
             (StatusCodes.Status400BadRequest, "Malformed body", "The request body is missing or malformed.", ExampleValues.BadRequest("The request body must contain an isCompleted flag.")),
             (StatusCodes.Status404NotFound, "Not found", "The source material is not tracked, or the unit does not belong to it.", ExampleValues.NotFound("The unit is not part of a tracked source material.")),
             (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can modify a library.", ExampleValues.Forbidden("The caller does not own this library.")));
@@ -215,11 +215,11 @@ public static class LibraryEndpoints
             false,
             new List<LibraryUnitResponse>
             {
-                new(new Guid("00000000-0000-0000-0000-500000000001"), UnitType.Episode, 1, null, true),
-                new(new Guid("00000000-0000-0000-0000-500000000002"), UnitType.Episode, 2, null, true),
-                new(new Guid("00000000-0000-0000-0000-500000000003"), UnitType.Episode, 3, null, true),
-                new(new Guid("00000000-0000-0000-0000-500000000004"), UnitType.Episode, 4, null, false),
-                new(new Guid("00000000-0000-0000-0000-500000000005"), UnitType.Episode, 5, null, false)
+                new(new Guid("00000000-0000-0000-0000-500000000001"), UnitType.Episode, 1, 1, null, true),
+                new(new Guid("00000000-0000-0000-0000-500000000002"), UnitType.Episode, 1, 2, null, true),
+                new(new Guid("00000000-0000-0000-0000-500000000003"), UnitType.Episode, 1, 3, null, true),
+                new(new Guid("00000000-0000-0000-0000-500000000004"), UnitType.Episode, 1, 4, null, false),
+                new(new Guid("00000000-0000-0000-0000-500000000005"), UnitType.Episode, 1, 5, null, false)
             }),
         new(
             new Guid("00000000-0000-0000-0000-000000000001"),

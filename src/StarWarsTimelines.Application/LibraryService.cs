@@ -233,7 +233,7 @@ public sealed class LibraryService : ILibraryService
     /// <returns>A <see cref="LibraryItemResponse"/> populated from the entity.</returns>
     private static LibraryItemResponse MapItem(UserSourceMaterial item, IReadOnlyDictionary<Guid, bool> progress)
     {
-        var units = item.SourceMaterial.SourceMaterialUnits.OrderBy(u => u.Number).ToList();
+        var units = item.SourceMaterial.SourceMaterialUnits.OrderBy(u => u.GroupNumber).ThenBy(u => u.Number).ToList();
         return LibraryItemResponse.FromEntity(
             item,
             DeriveStatus(item, units, progress),

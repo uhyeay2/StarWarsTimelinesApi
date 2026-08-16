@@ -8,8 +8,10 @@ namespace StarWarsTimelines.Domain.Entities;
 /// </summary>
 /// <remarks>
 /// Units form part of the shared admin-managed catalog. A source material can have at most one unit per number
-/// (enforced by a unique index), so the ordering of a unit within its material is unambiguous. Lazy loading is not
-/// enabled, so no related data is fetched unless explicitly included.
+/// within a group (enforced by a unique index), so the ordering of a unit within its material is unambiguous.
+/// <see cref="GroupNumber"/> captures the group the unit belongs to when the material is released in groups — for
+/// shows this is the season and for comics the volume — and is <c>null</c> for materials without groups. Lazy
+/// loading is not enabled, so no related data is fetched unless explicitly included.
 /// </remarks>
 public sealed class SourceMaterialUnit
 {
@@ -29,7 +31,14 @@ public sealed class SourceMaterialUnit
     public UnitType UnitType { get; set; }
 
     /// <summary>
-    /// Gets or sets the unit's position within its source material, starting at 1.
+    /// Gets or sets the group the unit belongs to (the season for a show, the volume for a comic), or <c>null</c>
+    /// when the source material is not released in groups.
+    /// </summary>
+    public int? GroupNumber { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unit's position within its group (or within its source material when it has no group),
+    /// starting at 1.
     /// </summary>
     public int Number { get; set; }
 

@@ -9,12 +9,14 @@ namespace StarWarsTimelines.Application.Dtos;
 /// <param name="Id">The unique identifier of the unit.</param>
 /// <param name="SourceMaterialId">The identifier of the source material the unit belongs to.</param>
 /// <param name="UnitType">The kind of unit.</param>
-/// <param name="Number">The unit's position within its source material.</param>
+/// <param name="GroupNumber">The group the unit belongs to (season for a show, volume for a comic), or <c>null</c>.</param>
+/// <param name="Number">The unit's position within its group or source material.</param>
 /// <param name="Title">The optional display title of the unit.</param>
 public record SourceMaterialUnitResponse(
     Guid Id,
     Guid SourceMaterialId,
     UnitType UnitType,
+    int? GroupNumber,
     int Number,
     string? Title)
 {
@@ -24,5 +26,5 @@ public record SourceMaterialUnitResponse(
     /// <param name="item">The unit entity to map.</param>
     /// <returns>A <see cref="SourceMaterialUnitResponse"/> populated from the entity.</returns>
     public static SourceMaterialUnitResponse FromEntity(SourceMaterialUnit item) =>
-        new(item.Id, item.SourceMaterialId, item.UnitType, item.Number, item.Title);
+        new(item.Id, item.SourceMaterialId, item.UnitType, item.GroupNumber, item.Number, item.Title);
 }

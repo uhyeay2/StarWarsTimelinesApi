@@ -11,6 +11,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
 {
     private readonly ISourceMaterialEventRepository _repository;
     private readonly ISourceMaterialRepository _catalog;
+    private readonly ISourceMaterialUnitRepository _units;
     private readonly ICharacterRepository _characters;
     private readonly ILocationRepository _locations;
     private readonly IVehicleRepository _vehicles;
@@ -21,6 +22,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     /// </summary>
     /// <param name="repository">The repository used to persist timeline events.</param>
     /// <param name="catalog">The repository used to validate events' source materials against the catalog.</param>
+    /// <param name="units">The repository used to validate events' source material unit links.</param>
     /// <param name="characters">The repository used to validate event character links.</param>
     /// <param name="locations">The repository used to validate event location links.</param>
     /// <param name="vehicles">The repository used to validate event vehicle links.</param>
@@ -28,6 +30,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     public SourceMaterialEventService(
         ISourceMaterialEventRepository repository,
         ISourceMaterialRepository catalog,
+        ISourceMaterialUnitRepository units,
         ICharacterRepository characters,
         ILocationRepository locations,
         IVehicleRepository vehicles,
@@ -35,6 +38,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     {
         _repository = repository;
         _catalog = catalog;
+        _units = units;
         _characters = characters;
         _locations = locations;
         _vehicles = vehicles;
@@ -59,7 +63,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     public async Task<SourceMaterialEventResponse> CreateAsync(CreateSourceMaterialEventRequest request, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(request.Title);
-        await ValidateReferencesAsync(request.SourceMaterialId, request.CharacterIds, request.LocationIds, request.VehicleIds, cancellationToken);
+        await ValidateReferencesAsync(request.SourceMaterialId, request.SourceMaterialUnitId, request.CharacterIds, request.LocationIds, request.VehicleIds, cancellationToken);
 
         var item = new SourceMaterialEvent
         {
@@ -71,6 +75,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
             DisplayDate = request.DisplayDate,
             DisplayDateEnd = request.DisplayDateEnd,
             SourceMaterialId = request.SourceMaterialId,
+            SourceMaterialUnitId = request.SourceMaterialUnitId,
             EventCharacters = request.CharacterIds.Select(x => new EventCharacter { CharacterId = x }).ToList(),
             EventLocations = request.LocationIds.Select(x => new EventLocation { LocationId = x }).ToList(),
             EventVehicles = request.VehicleIds.Select(x => new EventVehicle { VehicleId = x }).ToList()
@@ -130,6 +135,12 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
             item.SourceMaterialId = sourceMaterialId;
         }
 
+        if (request.SourceMaterialUnitId is Guid sourceMaterialUnitId)
+        {
+            await ValidateUnitLinkAsync(item.SourceMaterialId, sourceMaterialUnitId, cancellationToken);
+            item.SourceMaterialUnitId = sourceMaterialUnitId;
+        }
+
         if (request.CharacterIds is not null)
         {
             await ValidateCharactersAsync(request.CharacterIds, cancellationToken);
@@ -170,18 +181,21 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     }
 
     /// <summary>
-    /// Verifies that the referenced source material and every linked character, location, and vehicle exist.
+    /// Verifies that the referenced source material (and its optional unit) and every linked character, location,
+    /// and vehicle exist.
     /// </summary>
     /// <param name="sourceMaterialId">The source material identifier to validate.</param>
+    /// <param name="sourceMaterialUnitId">The source material unit identifier to validate, or <c>null</c>.</param>
     /// <param name="characterIds">The character identifiers to validate.</param>
     /// <param name="locationIds">The location identifiers to validate.</param>
     /// <param name="vehicleIds">The vehicle identifiers to validate.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <exception cref="ArgumentException">
-    /// Thrown when the source material or any referenced character, location, or vehicle does not exist.
+    /// Thrown when the source material, its unit, or any referenced character, location, or vehicle does not exist.
     /// </exception>
     private async Task ValidateReferencesAsync(
         Guid sourceMaterialId,
+        Guid? sourceMaterialUnitId,
         IReadOnlyList<Guid> characterIds,
         IReadOnlyList<Guid> locationIds,
         IReadOnlyList<Guid> vehicleIds,
@@ -192,9 +206,35 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
             throw new ArgumentException($"Source material '{sourceMaterialId}' does not exist.", nameof(sourceMaterialId));
         }
 
+        if (sourceMaterialUnitId is Guid unitId)
+        {
+            await ValidateUnitLinkAsync(sourceMaterialId, unitId, cancellationToken);
+        }
+
         await ValidateCharactersAsync(characterIds, cancellationToken);
         await ValidateLocationsAsync(locationIds, cancellationToken);
         await ValidateVehiclesAsync(vehicleIds, cancellationToken);
+    }
+
+    /// <summary>
+    /// Verifies that a unit exists and belongs to the event's source material.
+    /// </summary>
+    /// <param name="sourceMaterialId">The identifier of the source material the unit must belong to.</param>
+    /// <param name="unitId">The identifier of the unit to validate.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <exception cref="ArgumentException">Thrown when the unit does not exist or belongs to another source material.</exception>
+    private async Task ValidateUnitLinkAsync(Guid sourceMaterialId, Guid unitId, CancellationToken cancellationToken)
+    {
+        var unit = await _units.GetByIdAsync(unitId, cancellationToken);
+        if (unit is null)
+        {
+            throw new ArgumentException($"Source material unit '{unitId}' does not exist.", nameof(unitId));
+        }
+
+        if (unit.SourceMaterialId != sourceMaterialId)
+        {
+            throw new ArgumentException($"Source material unit '{unitId}' does not belong to the event's source material.", nameof(unitId));
+        }
     }
 
     /// <summary>

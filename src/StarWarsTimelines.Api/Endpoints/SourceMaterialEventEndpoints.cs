@@ -39,6 +39,7 @@ public static class SourceMaterialEventEndpoints
                         "0 BBY",
                         null,
                         new SourceMaterialResponse(new Guid("00000000-0000-0000-0000-000000000004"), "Star Wars: Episode IV - A New Hope", Medium.Movie, CanonType.CanonAndLegends),
+                        null,
                         new List<CharacterResponse>
                         {
                             new(new Guid("00000000-0000-0000-0000-100000000022"), "Luke Skywalker"),
@@ -86,6 +87,7 @@ public static class SourceMaterialEventEndpoints
                 "32 BBY",
                 null,
                 new Guid("00000000-0000-0000-0000-000000000001"),
+                null,
                 new Guid[] { new("00000000-0000-0000-0000-100000000008"), new("00000000-0000-0000-0000-100000000009") },
                 new Guid[] { new("00000000-0000-0000-0000-200000000005") },
                 new Guid[] { new("00000000-0000-0000-0000-300000000004"), new("00000000-0000-0000-0000-300000000005") })),
@@ -97,6 +99,7 @@ public static class SourceMaterialEventEndpoints
                 "0 BBY",
                 null,
                 new Guid("00000000-0000-0000-0000-000000000001"),
+                null,
                 [],
                 [],
                 [])))
@@ -119,8 +122,8 @@ public static class SourceMaterialEventEndpoints
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithRequestExamples(
-            ("Adjust year", "Updates only the year, leaving the other fields unchanged.", new UpdateSourceMaterialEventRequest(null, null, null, -30, null, null, null, null, null, null)),
-            ("Blank title", "Rejected when the title is set to null or white space.", new UpdateSourceMaterialEventRequest("", null, null, null, null, null, null, null, null, null)))
+            ("Adjust year", "Updates only the year, leaving the other fields unchanged.", new UpdateSourceMaterialEventRequest(null, null, null, -30, null, null, null, null, null, null, null)),
+            ("Blank title", "Rejected when the title is set to null or white space.", new UpdateSourceMaterialEventRequest("", null, null, null, null, null, null, null, null, null, null)))
         .WithResponseExamples(
             (StatusCodes.Status200OK, "Event updated", "The event after the update.", UpdatedEventExample),
             (StatusCodes.Status400BadRequest, "Blank title", "The title is required.", ExampleValues.BadRequest("Title must not be blank.")),
@@ -156,6 +159,7 @@ public static class SourceMaterialEventEndpoints
         "32 BBY",
         null,
         new SourceMaterialResponse(new Guid("00000000-0000-0000-0000-000000000001"), "Star Wars: Episode I - The Phantom Menace", Medium.Movie, CanonType.CanonAndLegends),
+        null,
         new List<CharacterResponse>
         {
             new(new Guid("00000000-0000-0000-0000-100000000008"), "Qui-Gon Jinn"),
@@ -185,6 +189,7 @@ public static class SourceMaterialEventEndpoints
         "30 BBY",
         null,
         new SourceMaterialResponse(new Guid("00000000-0000-0000-0000-000000000001"), "Star Wars: Episode I - The Phantom Menace", Medium.Movie, CanonType.CanonAndLegends),
+        null,
         new List<CharacterResponse>
         {
             new(new Guid("00000000-0000-0000-0000-100000000008"), "Qui-Gon Jinn"),

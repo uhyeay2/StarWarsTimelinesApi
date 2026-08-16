@@ -28,5 +28,12 @@ public sealed class SourceMaterialEventConfiguration : IEntityTypeConfiguration<
             .WithMany()
             .HasForeignKey(x => x.SourceMaterialId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // An event optionally points at the specific unit it depicts. Deleting a unit must never delete the event,
+        // so the link is set to null when the unit is removed.
+        builder.HasOne(x => x.SourceMaterialUnit)
+            .WithMany()
+            .HasForeignKey(x => x.SourceMaterialUnitId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

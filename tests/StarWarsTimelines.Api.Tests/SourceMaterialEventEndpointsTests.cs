@@ -22,7 +22,14 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
         "The Battle of Endor",
         "The Rescue",
         "The Battle of Exegol",
-        "The Second Galactic Civil War"
+        "The Second Galactic Civil War",
+        "The Great Hyperspace Disaster",
+        "The Descent of the Je'daii",
+        "The Holocron Heist",
+        "The Battle of Lothal",
+        "The Search for Thrawn",
+        "The Wounded Jedi",
+        "The Fall of Bracca"
     ];
 
     public SourceMaterialEventEndpointsTests(StarWarsTimelinesApiFactory factory) : base(factory)
@@ -88,7 +95,7 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
     {
         var response = await Client.PostAsJsonAsync(
             "/api/source-material-events",
-            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), [], [], []));
+            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), null, [], [], []));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -100,7 +107,7 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             "/api/source-material-events",
-            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), [], [], []));
+            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), null, [], [], []));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -124,6 +131,7 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
                 "0 BBY",
                 null,
                 source.Id,
+                null,
                 [luke],
                 [yavin4],
                 [falcon]));
@@ -145,7 +153,7 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             "/api/source-material-events",
-            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), [], [], []));
+            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), null, [], [], []));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -158,7 +166,44 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             "/api/source-material-events",
-            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, [Guid.NewGuid()], [], []));
+            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, null, [Guid.NewGuid()], [], []));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateEvent_AsAdmin_WithValidUnitLink_ReturnsUnit()
+    {
+        var client = await CreateAdminClientAsync();
+        var mandalorian = await GetSourceMaterialByTitleAsync("The Mandalorian");
+        var unitsResponse = await Client.GetAsync($"/api/source-materials/{mandalorian.Id}/units");
+        var units = (await unitsResponse.Content.ReadFromJsonAsync<List<SourceMaterialUnitResponse>>())!;
+
+        var createdResponse = await client.PostAsJsonAsync(
+            "/api/source-material-events",
+            new CreateSourceMaterialEventRequest("The Marshal's Last Job", "A job goes wrong on Nevarro.", CanonType.Canon, 9, "9 ABY", null, mandalorian.Id, units[0].Id, [], [], []));
+
+        Assert.Equal(HttpStatusCode.Created, createdResponse.StatusCode);
+        var created = await createdResponse.Content.ReadFromJsonAsync<SourceMaterialEventResponse>();
+
+        Assert.NotNull(created);
+        Assert.NotNull(created!.SourceMaterialUnit);
+        Assert.Equal(units[0].Id, created.SourceMaterialUnit.Id);
+        Assert.Equal("The Mandalorian", created.SourceMaterial.Title);
+    }
+
+    [Fact]
+    public async Task CreateEvent_AsAdmin_WithUnitFromAnotherMaterial_ReturnsBadRequest()
+    {
+        var client = await CreateAdminClientAsync();
+        var source = await GetSourceMaterialByTitleAsync("Star Wars: Episode IV - A New Hope");
+        var mandalorian = await GetSourceMaterialByTitleAsync("The Mandalorian");
+        var unitsResponse = await Client.GetAsync($"/api/source-materials/{mandalorian.Id}/units");
+        var units = (await unitsResponse.Content.ReadFromJsonAsync<List<SourceMaterialUnitResponse>>())!;
+
+        var response = await client.PostAsJsonAsync(
+            "/api/source-material-events",
+            new CreateSourceMaterialEventRequest("Test", "desc", CanonType.Canon, 0, "0 BBY", null, source.Id, units[0].Id, [], [], []));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -172,7 +217,7 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
 
         var updateResponse = await client.PutAsJsonAsync(
             $"/api/source-material-events/{created.Id}",
-            new UpdateSourceMaterialEventRequest("Updated title", null, null, null, null, null, null, null, [hoth], null));
+            new UpdateSourceMaterialEventRequest("Updated title", null, null, null, null, null, null, null, null, [hoth], null));
 
         updateResponse.EnsureSuccessStatusCode();
         var updated = await updateResponse.Content.ReadFromJsonAsync<SourceMaterialEventResponse>();
@@ -190,7 +235,7 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
 
         var updateResponse = await client.PutAsJsonAsync(
             $"/api/source-material-events/{created.Id}",
-            new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, null, [Guid.NewGuid()], null, null));
+            new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, null, null, [Guid.NewGuid()], null, null));
 
         Assert.Equal(HttpStatusCode.BadRequest, updateResponse.StatusCode);
     }
@@ -215,7 +260,7 @@ public sealed class SourceMaterialEventEndpointsTests : ApiTestBase
         var source = await GetSourceMaterialByTitleAsync("Star Wars: Episode IV - A New Hope");
         var response = await client.PostAsJsonAsync(
             "/api/source-material-events",
-            new CreateSourceMaterialEventRequest(title, "desc", CanonType.CanonAndLegends, 0, "0 BBY", null, source.Id, [], [], []));
+            new CreateSourceMaterialEventRequest(title, "desc", CanonType.CanonAndLegends, 0, "0 BBY", null, source.Id, null, [], [], []));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SourceMaterialEventResponse>())!;
     }

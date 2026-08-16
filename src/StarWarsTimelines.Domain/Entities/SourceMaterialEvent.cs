@@ -8,7 +8,9 @@ namespace StarWarsTimelines.Domain.Entities;
 /// </summary>
 /// <remarks>
 /// Events are authored against the <see cref="SourceMaterial"/> catalog and reference it through
-/// <see cref="SourceMaterialId"/>. The event owns its many-to-many links (<see cref="EventCharacters"/>,
+/// <see cref="SourceMaterialId"/>. When an event depicts a specific sub-unit of the source material — one episode
+/// of a show, one chapter of a book, one issue of a comic, or one level of a game — it can reference that unit
+/// through <see cref="SourceMaterialUnitId"/>. The event owns its many-to-many links (<see cref="EventCharacters"/>,
 /// <see cref="EventLocations"/>, <see cref="EventVehicles"/>); the linked catalog entities have no inverse
 /// collections.
 /// </remarks>
@@ -59,6 +61,18 @@ public sealed class SourceMaterialEvent
     /// Gets or sets the source material the event is drawn from.
     /// </summary>
     public SourceMaterial SourceMaterial { get; set; } = null!;
+
+    /// <summary>
+    /// Gets or sets the identifier of the <see cref="SourceMaterialUnit"/> the event depicts, or <c>null</c> when the
+    /// event covers the whole source material rather than a single sub-unit.
+    /// </summary>
+    public Guid? SourceMaterialUnitId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the specific sub-unit of the source material the event depicts, or <c>null</c> when the event
+    /// covers the whole source material.
+    /// </summary>
+    public SourceMaterialUnit? SourceMaterialUnit { get; set; }
 
     /// <summary>
     /// Gets or sets the characters that appear in the event.

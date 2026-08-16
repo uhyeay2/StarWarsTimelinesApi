@@ -12,6 +12,8 @@ namespace StarWarsTimelines.Application.Dtos;
 /// <param name="DisplayDate">The formatted display date of the event.</param>
 /// <param name="DisplayDateEnd">The formatted display date marking the end of the event's span, or <c>null</c>.</param>
 /// <param name="SourceMaterialId">The identifier of the source material the event is drawn from.</param>
+/// <param name="SourceMaterialUnitId">The identifier of the specific sub-unit the event depicts, or <c>null</c> when the
+/// event covers the whole source material.</param>
 /// <param name="CharacterIds">The identifiers of the characters that appear in the event.</param>
 /// <param name="LocationIds">The identifiers of the locations the event takes place in.</param>
 /// <param name="VehicleIds">The identifiers of the vehicles that appear in the event.</param>
@@ -23,6 +25,7 @@ public record CreateSourceMaterialEventRequest(
     string DisplayDate,
     string? DisplayDateEnd,
     Guid SourceMaterialId,
+    Guid? SourceMaterialUnitId,
     IReadOnlyList<Guid> CharacterIds,
     IReadOnlyList<Guid> LocationIds,
     IReadOnlyList<Guid> VehicleIds);

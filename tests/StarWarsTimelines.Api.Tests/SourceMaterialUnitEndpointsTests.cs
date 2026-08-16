@@ -8,7 +8,7 @@ namespace StarWarsTimelines.Api.Tests;
 public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 {
     private static readonly Guid MandalorianId = new("00000000-0000-0000-0000-000000000012");
-    private static readonly Guid MandalorianUnitOneId = new("00000000-0000-0000-0000-500000000006");
+    private static readonly Guid MandalorianUnitOneId = new("00000000-0000-0000-0000-500000000025");
 
     public SourceMaterialUnitEndpointsTests(StarWarsTimelinesApiFactory factory) : base(factory)
     {
@@ -44,7 +44,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
     {
         var response = await Client.PostAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units",
-            new CreateSourceMaterialUnitRequest(UnitType.Episode, 9, null));
+            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 9, null));
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -56,7 +56,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units",
-            new CreateSourceMaterialUnitRequest(UnitType.Episode, 9, null));
+            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 9, null));
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -68,7 +68,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units",
-            new CreateSourceMaterialUnitRequest(UnitType.Episode, 9, "Chapter 9: The Marshal"));
+            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 9, "Chapter 9: The Marshal"));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var created = await response.Content.ReadFromJsonAsync<SourceMaterialUnitResponse>();
@@ -87,7 +87,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             $"/api/source-materials/{Guid.NewGuid()}/units",
-            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, null));
+            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 1, null));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -99,7 +99,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units",
-            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, null));
+            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 1, null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -111,7 +111,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PostAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units",
-            new CreateSourceMaterialUnitRequest(UnitType.Episode, 0, null));
+            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 0, null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -124,7 +124,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PutAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units/{created.Id}",
-            new UpdateSourceMaterialUnitRequest(UnitType.Chapter, 21, "Renamed"));
+            new UpdateSourceMaterialUnitRequest(UnitType.Chapter, 1, 21, "Renamed"));
 
         response.EnsureSuccessStatusCode();
         var updated = await response.Content.ReadFromJsonAsync<SourceMaterialUnitResponse>();
@@ -142,7 +142,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PutAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units/{Guid.NewGuid()}",
-            new UpdateSourceMaterialUnitRequest(null, null, null));
+            new UpdateSourceMaterialUnitRequest(null, null, null, null));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
@@ -155,7 +155,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
         var response = await client.PutAsJsonAsync(
             $"/api/source-materials/{MandalorianId}/units/{MandalorianUnitOneId}",
-            new UpdateSourceMaterialUnitRequest(null, 20, null));
+            new UpdateSourceMaterialUnitRequest(null, 1, 20, null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
@@ -200,7 +200,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
         var client = await CreateAdminClientAsync();
         var response = await client.PostAsJsonAsync(
             $"/api/source-materials/{sourceMaterialId}/units",
-            new CreateSourceMaterialUnitRequest(UnitType.Episode, number, null));
+            new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, number, null));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SourceMaterialUnitResponse>())!;
     }

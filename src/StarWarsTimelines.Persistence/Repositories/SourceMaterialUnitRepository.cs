@@ -32,14 +32,17 @@ public sealed class SourceMaterialUnitRepository : ISourceMaterialUnitRepository
         await _context.SourceMaterialUnits
             .AsNoTracking()
             .Where(x => x.SourceMaterialId == sourceMaterialId)
-            .OrderBy(x => x.Number)
+            .OrderBy(x => x.GroupNumber)
+            .ThenBy(x => x.Number)
             .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
-    public async Task<SourceMaterialUnit?> GetByNumberAsync(Guid sourceMaterialId, int number, CancellationToken cancellationToken = default) =>
+    public async Task<SourceMaterialUnit?> GetByNumberAsync(Guid sourceMaterialId, int? groupNumber, int number, CancellationToken cancellationToken = default) =>
         await _context.SourceMaterialUnits
             .AsNoTracking()
-            .FirstOrDefaultAsync(x => x.SourceMaterialId == sourceMaterialId && x.Number == number, cancellationToken);
+            .FirstOrDefaultAsync(
+                x => x.SourceMaterialId == sourceMaterialId && x.GroupNumber == groupNumber && x.Number == number,
+                cancellationToken);
 
     /// <inheritdoc />
     public async Task AddAsync(SourceMaterialUnit item, CancellationToken cancellationToken = default) =>

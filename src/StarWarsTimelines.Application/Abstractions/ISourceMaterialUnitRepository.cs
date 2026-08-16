@@ -16,21 +16,22 @@ public interface ISourceMaterialUnitRepository
     Task<SourceMaterialUnit?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets all units of a source material ordered by number.
+    /// Gets all units of a source material ordered by group and then number.
     /// </summary>
     /// <param name="sourceMaterialId">The identifier of the source material whose units are returned.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <returns>A read-only list of the material's units, ordered by number.</returns>
+    /// <returns>A read-only list of the material's units, ordered by group and then number.</returns>
     Task<IReadOnlyList<SourceMaterialUnit>> GetBySourceMaterialAsync(Guid sourceMaterialId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Gets a single unit of a source material by its number, or <c>null</c> if no match is found.
+    /// Gets a single unit of a source material by its group and number, or <c>null</c> if no match is found.
     /// </summary>
     /// <param name="sourceMaterialId">The identifier of the owning source material.</param>
+    /// <param name="groupNumber">The group (season/volume) the unit belongs to, or <c>null</c> for ungrouped units.</param>
     /// <param name="number">The unit number to look up.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The matching <see cref="SourceMaterialUnit"/>, or <c>null</c>.</returns>
-    Task<SourceMaterialUnit?> GetByNumberAsync(Guid sourceMaterialId, int number, CancellationToken cancellationToken = default);
+    Task<SourceMaterialUnit?> GetByNumberAsync(Guid sourceMaterialId, int? groupNumber, int number, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Stages a new unit for insertion.
