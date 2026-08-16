@@ -1,0 +1,22 @@
+namespace StarWarsTimelines.Domain.Entities;
+
+/// <summary>
+/// Represents a named planet, star system, or other place from the Star Wars universe that can be linked to
+/// timeline events.
+/// </summary>
+/// <remarks>
+/// Locations form an admin-managed lookup catalog. They are never queried with their associated events; the
+/// linking is owned by the <see cref="EventLocation"/> table, so this entity has no inverse collection.
+/// </remarks>
+public sealed class Location
+{
+    /// <summary>
+    /// Gets or sets the unique identifier of the location.
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Gets or sets the location's name (for example, "Tython").
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+}

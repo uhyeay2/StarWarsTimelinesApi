@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/StarWarsTimelines.Api/StarWarsTimelines.Api.csproj" />
+    <Project Path="src/StarWarsTimelines.Application/StarWarsTimelines.Application.csproj" />
+    <Project Path="src/StarWarsTimelines.Domain/StarWarsTimelines.Domain.csproj" />
+    <Project Path="src/StarWarsTimelines.Persistence/StarWarsTimelines.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/StarWarsTimelines.Api.Tests/StarWarsTimelines.Api.Tests.csproj" />
+    <Project Path="tests/StarWarsTimelines.Application.Tests/StarWarsTimelines.Application.Tests.csproj" />
+  </Folder>
+</Solution>

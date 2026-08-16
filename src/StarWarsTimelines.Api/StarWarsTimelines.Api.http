@@ -1,0 +1,191 @@
+@StarWarsTimelines.Api_HostAddress = http://localhost:5018
+
+### Login as admin
+# @name login
+POST {{StarWarsTimelines.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "admin",
+  "password": "admin123"
+}
+
+### Login as standard user (padme)
+POST {{StarWarsTimelines.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "username": "padme",
+  "password": "padme123"
+}
+
+### GET catalog (public)
+GET {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/
+Accept: application/json
+
+### GET catalog item by id
+GET {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/{id}
+Accept: application/json
+
+### POST source material (admin only)
+POST {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "title": "Rogue One: A Star Wars Story",
+  "medium": 0,
+  "canonType": 0
+}
+
+### PUT source material (admin only)
+PUT {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/{id}
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "title": "Rogue One",
+  "canonType": 0
+}
+
+### DELETE source material (admin only)
+DELETE {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/{id}
+Authorization: Bearer {{login.response.body.token}}
+
+### GET user library
+GET {{StarWarsTimelines.Api_HostAddress}}/api/users/22222222-2222-2222-2222-222222222222/source-materials
+Authorization: Bearer {{login.response.body.token}}
+
+### POST library item (add to library, defaults to Wish Listed)
+POST {{StarWarsTimelines.Api_HostAddress}}/api/users/22222222-2222-2222-2222-222222222222/source-materials
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "sourceMaterialId": "00000000-0000-0000-0000-000000000022"
+}
+
+### PUT library item (update status/favorite)
+PUT {{StarWarsTimelines.Api_HostAddress}}/api/users/22222222-2222-2222-2222-222222222222/source-materials/00000000-0000-0000-0000-000000000022
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "status": 0,
+  "isFavorite": true
+}
+
+### DELETE library item
+DELETE {{StarWarsTimelines.Api_HostAddress}}/api/users/22222222-2222-2222-2222-222222222222/source-materials/00000000-0000-0000-0000-000000000022
+Authorization: Bearer {{login.response.body.token}}
+
+### Reorder library (owner or admin)
+PUT {{StarWarsTimelines.Api_HostAddress}}/api/users/22222222-2222-2222-2222-222222222222/source-materials/reorder
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "orderedSourceMaterialIds": [
+    "00000000-0000-0000-0000-000000000016",
+    "00000000-0000-0000-0000-000000000009",
+    "00000000-0000-0000-0000-000000000017",
+    "00000000-0000-0000-0000-000000000021",
+    "00000000-0000-0000-0000-000000000001",
+    "00000000-0000-0000-0000-000000000002",
+    "00000000-0000-0000-0000-000000000010"
+  ]
+}
+
+### GET timeline events (public)
+GET {{StarWarsTimelines.Api_HostAddress}}/api/source-material-events/
+Accept: application/json
+
+### GET characters (public)
+GET {{StarWarsTimelines.Api_HostAddress}}/api/characters/
+Accept: application/json
+
+### GET locations (public)
+GET {{StarWarsTimelines.Api_HostAddress}}/api/locations/
+Accept: application/json
+
+### GET vehicles (public)
+GET {{StarWarsTimelines.Api_HostAddress}}/api/vehicles/
+Accept: application/json
+
+### POST character (admin only)
+POST {{StarWarsTimelines.Api_HostAddress}}/api/characters/
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "name": "Wicket W. Warrick"
+}
+
+### POST timeline event (admin only)
+POST {{StarWarsTimelines.Api_HostAddress}}/api/source-material-events/
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "title": "The Skirmish on Endor",
+  "description": "Rebel commandos skirmish with Imperial forces in the forests of Endor.",
+  "canonType": 2,
+  "year": 4,
+  "displayDate": "4 ABY",
+  "sourceMaterialId": "00000000-0000-0000-0000-000000000006",
+  "characterIds": ["00000000-0000-0000-0000-100000000001"],
+  "locationIds": [],
+  "vehicleIds": []
+}
+
+### PUT timeline event (admin only)
+PUT {{StarWarsTimelines.Api_HostAddress}}/api/source-material-events/{id}
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "title": "The Skirmish on Endor (Remastered)"
+}
+
+### DELETE timeline event (admin only)
+DELETE {{StarWarsTimelines.Api_HostAddress}}/api/source-material-events/{id}
+Authorization: Bearer {{login.response.body.token}}
+
+### GET units of The Mandalorian (public)
+GET {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/00000000-0000-0000-0000-000000000012/units
+Accept: application/json
+
+### POST unit (admin only)
+POST {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/00000000-0000-0000-0000-000000000012/units
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "unitType": 0,
+  "number": 9,
+  "title": "Chapter 9: The Marshal"
+}
+
+### PUT unit (admin only)
+PUT {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/00000000-0000-0000-0000-000000000012/units/{unitId}
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "title": "Chapter 9: The Marshal"
+}
+
+### DELETE unit (admin only)
+DELETE {{StarWarsTimelines.Api_HostAddress}}/api/source-materials/00000000-0000-0000-0000-000000000012/units/{unitId}
+Authorization: Bearer {{login.response.body.token}}
+
+### Set unit progress on a library item (owner or admin)
+PUT {{StarWarsTimelines.Api_HostAddress}}/api/users/22222222-2222-2222-2222-222222222222/source-materials/00000000-0000-0000-0000-000000000010/units/00000000-0000-0000-0000-500000000001
+Authorization: Bearer {{login.response.body.token}}
+Content-Type: application/json
+
+{
+  "isCompleted": true
+}
+
+###

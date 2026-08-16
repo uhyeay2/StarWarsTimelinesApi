@@ -1,0 +1,43 @@
+using Microsoft.EntityFrameworkCore;
+using StarWarsTimelines.Application.Abstractions;
+using StarWarsTimelines.Domain.Entities;
+
+namespace StarWarsTimelines.Persistence.Repositories;
+
+/// <summary>
+/// EF Core-backed implementation of <see cref="ISourceMaterialRepository"/>.
+/// </summary>
+/// <remarks>
+/// All reads use <c>AsNoTracking()</c> and never include related data, so only the minimal columns are loaded.
+/// </remarks>
+public sealed class SourceMaterialRepository : ISourceMaterialRepository
+{
+    private readonly AppDbContext _context;
+
+    /// <summary>
+    /// Creates a new instance of the <see cref="SourceMaterialRepository"/>.
+    /// </summary>
+    /// <param name="context">The database context to query.</param>
+    public SourceMaterialRepository(AppDbContext context)
+    {
+        _context = context;
+    }
+
+    /// <inheritdoc />
+    public async Task<SourceMaterial?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await _context.SourceMaterials.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SourceMaterial>> GetAllAsync(CancellationToken cancellationToken = default) =>
+        await _context.SourceMaterials.AsNoTracking().OrderBy(x => x.Title).ToListAsync(cancellationToken);
+
+    /// <inheritdoc />
+    public async Task AddAsync(SourceMaterial item, CancellationToken cancellationToken = default) =>
+        await _context.SourceMaterials.AddAsync(item, cancellationToken);
+
+    /// <inheritdoc />
+    public void Update(SourceMaterial item) => _context.SourceMaterials.Update(item);
+
+    /// <inheritdoc />
+    public void Remove(SourceMaterial item) => _context.SourceMaterials.Remove(item);
+}
