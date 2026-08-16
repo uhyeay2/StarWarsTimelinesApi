@@ -113,4 +113,51 @@ public static class ExampleValues
         "ahsoka.tano",
         "Ahsoka Tano",
         "AHSOKA.TANO@EXAMPLE.COM");
+
+    // ---- Account settings ----
+
+    /// <summary>The seeded demo user "padme" with her verified email address.</summary>
+    public static readonly UserAccountResponse PadmeAccount = new(
+        new Guid("22222222-2222-2222-2222-222222222222"),
+        "padme",
+        "Padmé Amidala",
+        "padme@example.com",
+        true,
+        UserRole.Standard);
+
+    /// <summary>The demo user's account after her display name is changed.</summary>
+    public static readonly UserAccountResponse PadmeAccountUpdatedName = new(
+        new Guid("22222222-2222-2222-2222-222222222222"),
+        "padme",
+        "Queen Amidala",
+        "padme@example.com",
+        true,
+        UserRole.Standard);
+
+    /// <summary>The demo user's account after her email address is changed (awaiting verification).</summary>
+    public static readonly UserAccountResponse PadmeAccountUpdatedEmail = new(
+        new Guid("22222222-2222-2222-2222-222222222222"),
+        "padme",
+        "Padmé Amidala",
+        "padme.amidala@example.com",
+        false,
+        UserRole.Standard);
+
+    /// <summary>Changes the display name shown in the user interface.</summary>
+    public static readonly UpdateDisplayNameRequest UpdateDisplayName = new("Queen Amidala");
+
+    /// <summary>A display name that is empty or whitespace.</summary>
+    public static readonly UpdateDisplayNameRequest BlankDisplayName = new("   ");
+
+    /// <summary>Changes the email address to an address not yet in use.</summary>
+    public static readonly UpdateEmailRequest UpdateEmail = new("padme.amidala@example.com");
+
+    /// <summary>An email change rejected because the address already belongs to another account.</summary>
+    public static readonly UpdateEmailRequest DuplicateEmailUpdate = new("admin@example.com");
+
+    /// <summary>Changes the password when the current password is correct.</summary>
+    public static readonly UpdatePasswordRequest UpdatePassword = new("padme123", "noblequeen1");
+
+    /// <summary>A password change rejected because the current password is incorrect.</summary>
+    public static readonly UpdatePasswordRequest WrongCurrentPassword = new("wrong-password", "noblequeen1");
 }

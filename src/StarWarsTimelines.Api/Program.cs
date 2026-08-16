@@ -71,6 +71,7 @@ try
 
     builder.Services.AddScoped<ISourceMaterialService, SourceMaterialService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<IAccountService, AccountService>();
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<ILibraryService, LibraryService>();
     builder.Services.AddScoped<ICharacterService, CharacterService>();
@@ -129,6 +130,7 @@ try
 
     app.MapSourceMaterialEndpoints();
     app.MapAuthEndpoints();
+    app.MapUserEndpoints();
     app.MapLibraryEndpoints();
     app.MapCharacterEndpoints();
     app.MapLocationEndpoints();
