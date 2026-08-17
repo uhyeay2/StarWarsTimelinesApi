@@ -53,4 +53,20 @@ public sealed class SourceMaterialUnitRepository : ISourceMaterialUnitRepository
 
     /// <inheritdoc />
     public void Remove(SourceMaterialUnit item) => _context.SourceMaterialUnits.Remove(item);
+
+    /// <inheritdoc />
+    public async Task<bool> IsReferencedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var referencedByEvent = await _context.SourceMaterialEvents
+            .AsNoTracking()
+            .AnyAsync(x => x.SourceMaterialUnitId == id, cancellationToken);
+        if (referencedByEvent)
+        {
+            return true;
+        }
+
+        return await _context.UserSourceMaterialUnits
+            .AsNoTracking()
+            .AnyAsync(x => x.SourceMaterialUnitId == id, cancellationToken);
+    }
 }

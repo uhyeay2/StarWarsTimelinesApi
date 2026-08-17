@@ -40,4 +40,12 @@ public interface ICharacterRepository
     /// </summary>
     /// <param name="item">The character to remove.</param>
     void Remove(Character item);
+
+    /// <summary>
+    /// Determines whether any timeline event links the character.
+    /// </summary>
+    /// <param name="id">The unique identifier of the character.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns><c>true</c> when the character is linked to at least one event; otherwise, <c>false</c>.</returns>
+    Task<bool> IsReferencedByEventAsync(Guid id, CancellationToken cancellationToken = default);
 }

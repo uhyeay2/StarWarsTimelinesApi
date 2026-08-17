@@ -40,4 +40,12 @@ public interface IVehicleRepository
     /// </summary>
     /// <param name="item">The vehicle to remove.</param>
     void Remove(Vehicle item);
+
+    /// <summary>
+    /// Determines whether any timeline event links the vehicle.
+    /// </summary>
+    /// <param name="id">The unique identifier of the vehicle.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns><c>true</c> when the vehicle is linked to at least one event; otherwise, <c>false</c>.</returns>
+    Task<bool> IsReferencedByEventAsync(Guid id, CancellationToken cancellationToken = default);
 }

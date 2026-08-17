@@ -40,4 +40,8 @@ public sealed class CharacterRepository : ICharacterRepository
 
     /// <inheritdoc />
     public void Remove(Character item) => _context.Characters.Remove(item);
+
+    /// <inheritdoc />
+    public async Task<bool> IsReferencedByEventAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await _context.EventCharacters.AsNoTracking().AnyAsync(x => x.CharacterId == id, cancellationToken);
 }

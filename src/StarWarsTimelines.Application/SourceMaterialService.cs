@@ -97,6 +97,11 @@ public sealed class SourceMaterialService : ISourceMaterialService
             return false;
         }
 
+        if (await _repository.IsReferencedAsync(id, cancellationToken))
+        {
+            throw new ConflictException($"Source material '{item.Title}' is referenced by timeline events or user libraries and cannot be deleted.");
+        }
+
         _repository.Remove(item);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

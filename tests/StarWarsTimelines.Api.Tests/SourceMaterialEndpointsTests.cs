@@ -145,6 +145,27 @@ public sealed class SourceMaterialEndpointsTests : ApiTestBase
     }
 
     [Fact]
+    public async Task DeleteSourceMaterial_WhenReferencedByEvent_ReturnsConflict()
+    {
+        var created = await CreateSourceMaterialAsync("Linked material");
+        var client = await CreateAdminClientAsync();
+
+        var eventResponse = await client.PostAsJsonAsync(
+            "/api/source-material-events",
+            new CreateSourceMaterialEventRequest(
+                "Conflict Test Event", "desc", CanonType.Canon, 0, "0 BBY", null,
+                created.Id, null, [], [], []));
+        eventResponse.EnsureSuccessStatusCode();
+
+        var deleteResponse = await client.DeleteAsync($"/api/source-materials/{created.Id}");
+
+        Assert.Equal(HttpStatusCode.Conflict, deleteResponse.StatusCode);
+
+        var getResponse = await Client.GetAsync($"/api/source-materials/{created.Id}");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task GetMissingSourceMaterial_ReturnsNotFound()
     {
         var response = await Client.GetAsync($"/api/source-materials/{Guid.NewGuid()}");

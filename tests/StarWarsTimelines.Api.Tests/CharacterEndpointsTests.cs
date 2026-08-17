@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using StarWarsTimelines.Application.Dtos;
+using StarWarsTimelines.Domain.Enums;
 
 namespace StarWarsTimelines.Api.Tests;
 
@@ -114,6 +115,28 @@ public sealed class CharacterEndpointsTests : ApiTestBase
     }
 
     [Fact]
+    public async Task DeleteCharacter_WhenLinkedToEvent_ReturnsConflict()
+    {
+        var created = await CreateCharacterAsync("Linked character");
+        var client = await CreateAdminClientAsync();
+        var source = await CreateSourceMaterialAsync("Conflict Test Material");
+
+        var eventResponse = await client.PostAsJsonAsync(
+            "/api/source-material-events",
+            new CreateSourceMaterialEventRequest(
+                "Conflict Test Event", "desc", CanonType.Canon, 0, "0 BBY", null,
+                source.Id, null, [created.Id], [], []));
+        eventResponse.EnsureSuccessStatusCode();
+
+        var deleteResponse = await client.DeleteAsync($"/api/characters/{created.Id}");
+
+        Assert.Equal(HttpStatusCode.Conflict, deleteResponse.StatusCode);
+
+        var getResponse = await Client.GetAsync($"/api/characters/{created.Id}");
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+    }
+
+    [Fact]
     public async Task GetMissingCharacter_ReturnsNotFound()
     {
         var response = await Client.GetAsync($"/api/characters/{Guid.NewGuid()}");
@@ -127,5 +150,15 @@ public sealed class CharacterEndpointsTests : ApiTestBase
         var response = await client.PostAsJsonAsync("/api/characters", new CreateCharacterRequest(name));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<CharacterResponse>())!;
+    }
+
+    private async Task<SourceMaterialResponse> CreateSourceMaterialAsync(string title)
+    {
+        var client = await CreateAdminClientAsync();
+        var response = await client.PostAsJsonAsync(
+            "/api/source-materials",
+            new CreateSourceMaterialRequest(title, Medium.Movie, CanonType.Canon));
+        response.EnsureSuccessStatusCode();
+        return (await response.Content.ReadFromJsonAsync<SourceMaterialResponse>())!;
     }
 }

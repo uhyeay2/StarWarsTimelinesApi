@@ -40,4 +40,12 @@ public interface ILocationRepository
     /// </summary>
     /// <param name="item">The location to remove.</param>
     void Remove(Location item);
+
+    /// <summary>
+    /// Determines whether any timeline event links the location.
+    /// </summary>
+    /// <param name="id">The unique identifier of the location.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns><c>true</c> when the location is linked to at least one event; otherwise, <c>false</c>.</returns>
+    Task<bool> IsReferencedByEventAsync(Guid id, CancellationToken cancellationToken = default);
 }

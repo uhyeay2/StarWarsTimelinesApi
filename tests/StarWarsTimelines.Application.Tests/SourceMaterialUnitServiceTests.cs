@@ -369,4 +369,22 @@ public sealed class SourceMaterialUnitServiceTests
         Assert.False(deleted);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
+
+    [Fact]
+    public async Task DeleteAsync_WhenReferenced_ThrowsConflict()
+    {
+        var source = Source();
+        var item = Unit(source.Id, 1);
+        _repository
+            .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        _repository
+            .Setup(x => x.IsReferencedAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await Assert.ThrowsAsync<ConflictException>(() => _service.DeleteAsync(item.Id));
+
+        _repository.Verify(x => x.Remove(It.IsAny<SourceMaterialUnit>()), Times.Never);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

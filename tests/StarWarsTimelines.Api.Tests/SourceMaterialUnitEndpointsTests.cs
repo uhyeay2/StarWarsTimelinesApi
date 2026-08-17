@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using StarWarsTimelines.Application.Dtos;
 using StarWarsTimelines.Domain.Enums;
+using StarWarsTimelines.Persistence;
 
 namespace StarWarsTimelines.Api.Tests;
 
@@ -12,6 +15,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
 
     public SourceMaterialUnitEndpointsTests(StarWarsTimelinesApiFactory factory) : base(factory)
     {
+        ResetScratchUnits();
     }
 
     [Fact]
@@ -195,6 +199,27 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task DeleteUnit_WhenReferencedByEvent_ReturnsConflict()
+    {
+        var client = await CreateAdminClientAsync();
+
+        var eventResponse = await client.PostAsJsonAsync(
+            "/api/source-material-events",
+            new CreateSourceMaterialEventRequest(
+                "Conflict Test Event", "desc", CanonType.Canon, 0, "0 BBY", null,
+                MandalorianId, MandalorianUnitOneId, [], [], []));
+        eventResponse.EnsureSuccessStatusCode();
+
+        var deleteResponse = await client.DeleteAsync($"/api/source-materials/{MandalorianId}/units/{MandalorianUnitOneId}");
+
+        Assert.Equal(HttpStatusCode.Conflict, deleteResponse.StatusCode);
+
+        var getResponse = await Client.GetAsync($"/api/source-materials/{MandalorianId}/units");
+        var items = (await getResponse.Content.ReadFromJsonAsync<List<SourceMaterialUnitResponse>>())!;
+        Assert.Contains(items, x => x.Id == MandalorianUnitOneId);
+    }
+
     private async Task<SourceMaterialUnitResponse> CreateUnitAsync(Guid sourceMaterialId, int number)
     {
         var client = await CreateAdminClientAsync();
@@ -203,5 +228,17 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
             new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, number, null));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SourceMaterialUnitResponse>())!;
+    }
+
+    /// <summary>
+    /// Removes any scratch units created by other tests in this class so every test starts from the seeded
+    /// Mandalorian episode list (numbers 1-8).
+    /// </summary>
+    private void ResetScratchUnits()
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.ExecuteSqlRaw("DELETE FROM UserSourceMaterialUnits");
+        db.Database.ExecuteSql($"DELETE FROM SourceMaterialUnits WHERE SourceMaterialId = {MandalorianId} AND Number > 8");
     }
 }

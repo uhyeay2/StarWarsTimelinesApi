@@ -151,4 +151,21 @@ public sealed class VehicleServiceTests
 
         Assert.False(removed);
     }
+
+    [Fact]
+    public async Task DeleteAsync_WhenReferencedByEvent_ThrowsConflict()
+    {
+        var item = new Vehicle { Id = Guid.NewGuid(), Name = "Linked vehicle" };
+        _repository
+            .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        _repository
+            .Setup(x => x.IsReferencedByEventAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await Assert.ThrowsAsync<ConflictException>(() => _service.DeleteAsync(item.Id));
+
+        _repository.Verify(x => x.Remove(It.IsAny<Vehicle>()), Times.Never);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

@@ -51,4 +51,12 @@ public interface ISourceMaterialUnitRepository
     /// </summary>
     /// <param name="item">The unit to remove.</param>
     void Remove(SourceMaterialUnit item);
+
+    /// <summary>
+    /// Determines whether the unit is referenced by a timeline event or by a user's unit progress.
+    /// </summary>
+    /// <param name="id">The unique identifier of the unit.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns><c>true</c> when the unit is still referenced; otherwise, <c>false</c>.</returns>
+    Task<bool> IsReferencedAsync(Guid id, CancellationToken cancellationToken = default);
 }

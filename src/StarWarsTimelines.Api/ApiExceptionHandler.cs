@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using StarWarsTimelines.Application;
 
 namespace StarWarsTimelines.Api;
 
@@ -25,6 +26,24 @@ public sealed class ApiExceptionHandler : IExceptionHandler
             };
 
             httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+            return true;
+        }
+
+        // Conflicts thrown by the services (deleting a catalog entry that is still referenced) surface as a 409
+        // Conflict so the client can tell the difference between bad input and a data dependency.
+        if (exception is ConflictException)
+        {
+            var problemDetails = new ProblemDetails
+            {
+                Status = StatusCodes.Status409Conflict,
+                Title = "Conflict",
+                Type = "https://tools.ietf.org/html/rfc9110#section-15.5.10",
+                Detail = exception.Message,
+                Instance = httpContext.TraceIdentifier
+            };
+
+            httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
             await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
             return true;
         }

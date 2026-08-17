@@ -128,6 +128,11 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
             return false;
         }
 
+        if (await _repository.IsReferencedAsync(id, cancellationToken))
+        {
+            throw new ConflictException($"Unit '{item.Number}' is referenced by timeline events or user progress and cannot be deleted.");
+        }
+
         _repository.Remove(item);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

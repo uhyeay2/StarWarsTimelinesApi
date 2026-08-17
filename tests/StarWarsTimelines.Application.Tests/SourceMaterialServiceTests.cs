@@ -181,4 +181,27 @@ public sealed class SourceMaterialServiceTests
 
         Assert.False(deleted);
     }
+
+    [Fact]
+    public async Task DeleteAsync_WhenReferenced_ThrowsConflict()
+    {
+        var item = new SourceMaterial
+        {
+            Id = Guid.NewGuid(),
+            Title = "Linked material",
+            Medium = Medium.Movie,
+            CanonType = CanonType.Canon
+        };
+        _repository
+            .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        _repository
+            .Setup(x => x.IsReferencedAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await Assert.ThrowsAsync<ConflictException>(() => _service.DeleteAsync(item.Id));
+
+        _repository.Verify(x => x.Remove(It.IsAny<SourceMaterial>()), Times.Never);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
 }

@@ -84,6 +84,11 @@ public sealed class CharacterService : ICharacterService
             return false;
         }
 
+        if (await _repository.IsReferencedByEventAsync(id, cancellationToken))
+        {
+            throw new ConflictException($"Character '{item.Name}' is linked to one or more timeline events and cannot be deleted.");
+        }
+
         _repository.Remove(item);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

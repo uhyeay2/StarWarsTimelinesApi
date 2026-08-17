@@ -40,4 +40,8 @@ public sealed class LocationRepository : ILocationRepository
 
     /// <inheritdoc />
     public void Remove(Location item) => _context.Locations.Remove(item);
+
+    /// <inheritdoc />
+    public async Task<bool> IsReferencedByEventAsync(Guid id, CancellationToken cancellationToken = default) =>
+        await _context.EventLocations.AsNoTracking().AnyAsync(x => x.LocationId == id, cancellationToken);
 }

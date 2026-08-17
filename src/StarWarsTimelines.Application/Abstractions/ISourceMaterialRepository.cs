@@ -40,4 +40,13 @@ public interface ISourceMaterialRepository
     /// </summary>
     /// <param name="item">The source material to remove.</param>
     void Remove(SourceMaterial item);
+
+    /// <summary>
+    /// Determines whether the source material (or one of its units) is referenced by a timeline event, a user
+    /// library item, or a user's unit progress.
+    /// </summary>
+    /// <param name="id">The unique identifier of the source material.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns><c>true</c> when the material is still referenced; otherwise, <c>false</c>.</returns>
+    Task<bool> IsReferencedAsync(Guid id, CancellationToken cancellationToken = default);
 }

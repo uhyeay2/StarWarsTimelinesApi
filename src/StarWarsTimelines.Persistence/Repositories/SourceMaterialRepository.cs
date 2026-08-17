@@ -40,4 +40,40 @@ public sealed class SourceMaterialRepository : ISourceMaterialRepository
 
     /// <inheritdoc />
     public void Remove(SourceMaterial item) => _context.SourceMaterials.Remove(item);
+
+    /// <inheritdoc />
+    public async Task<bool> IsReferencedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var referencedByEvent = await _context.SourceMaterialEvents
+            .AsNoTracking()
+            .AnyAsync(x => x.SourceMaterialId == id, cancellationToken);
+        if (referencedByEvent)
+        {
+            return true;
+        }
+
+        var referencedByLibrary = await _context.UserSourceMaterials
+            .AsNoTracking()
+            .AnyAsync(x => x.SourceMaterialId == id, cancellationToken);
+        if (referencedByLibrary)
+        {
+            return true;
+        }
+
+        var unitIds = _context.SourceMaterialUnits
+            .Where(u => u.SourceMaterialId == id)
+            .Select(u => u.Id);
+
+        var unitReferencedByEvent = await _context.SourceMaterialEvents
+            .AsNoTracking()
+            .AnyAsync(x => x.SourceMaterialUnitId != null && unitIds.Contains(x.SourceMaterialUnitId.Value), cancellationToken);
+        if (unitReferencedByEvent)
+        {
+            return true;
+        }
+
+        return await _context.UserSourceMaterialUnits
+            .AsNoTracking()
+            .AnyAsync(x => unitIds.Contains(x.SourceMaterialUnitId), cancellationToken);
+    }
 }
