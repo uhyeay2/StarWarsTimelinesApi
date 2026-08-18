@@ -18,6 +18,9 @@ public static class ExampleValues
     public const string BearerToken =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIyMjIyMjIyMi0yMjIyLTIyMjItMjIyMi0yMjIyMjIyMjIyMjIiLCJuYW1lIjoicGFkbWUiLCJyb2xlIjoiU3RhbmRhcmQiLCJpc3MiOiJTdGFyV2Fyc1RpbWVsaW5lcyIsImF1ZCI6IlN0YXJXYXJzVGltZWxpbmVzIiwibmJmIjoxNzAwMDAwMDAwLCJleHAiOjE3MDAwMDM2MDB9.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
+    /// <summary>A plausible opaque refresh token (not a real token).</summary>
+    public const string RefreshTokenValue = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0";
+
     /// <summary>Builds the ProblemDetails body returned for failed validation.</summary>
     public static ProblemDetails BadRequest(string detail) => new()
     {
@@ -104,8 +107,15 @@ public static class ExampleValues
         "Padmé Amidala",
         UserRole.Standard);
 
-    /// <summary>A successful authentication response with a signed bearer token.</summary>
-    public static readonly AuthResponse ValidAuthResponse = new(BearerToken, PadmeUser);
+    /// <summary>A successful authentication response with a signed bearer token and refresh token.</summary>
+    public static readonly AuthResponse ValidAuthResponse = new(BearerToken, RefreshTokenValue, PadmeUser);
+
+    /// <summary>A valid, non-expired refresh token.</summary>
+    public static readonly RefreshTokenRequest ValidRefreshToken = new(RefreshTokenValue);
+
+    /// <summary>A refresh token whose expiry has passed.</summary>
+    public static readonly RefreshTokenRequest ExpiredRefreshToken = new(
+        "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000");
 
     /// <summary>The response returned when a registration succeeds.</summary>
     public static readonly RegisterResponse ValidRegistrationResponse = new(

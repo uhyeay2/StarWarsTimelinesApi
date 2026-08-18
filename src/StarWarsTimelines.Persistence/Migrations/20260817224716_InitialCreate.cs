@@ -36,6 +36,23 @@ namespace StarWarsTimelines.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Token = table.Column<string>(type: "TEXT", maxLength: 128, nullable: false),
+                    ExpiresAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
+                    RevokedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    ReplacedByToken = table.Column<string>(type: "TEXT", maxLength: 128, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "SourceMaterials",
                 columns: table => new
                 {
@@ -56,6 +73,10 @@ namespace StarWarsTimelines.Persistence.Migrations
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     Username = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     DisplayName = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Email = table.Column<string>(type: "TEXT", maxLength: 254, nullable: false),
+                    EmailVerifiedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: true),
+                    EmailVerificationTokenHash = table.Column<string>(type: "TEXT", maxLength: 64, nullable: true),
+                    EmailVerificationTokenExpiresAtUtc = table.Column<DateTime>(type: "TEXT", nullable: true),
                     PasswordHash = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
                     Role = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
@@ -78,36 +99,13 @@ namespace StarWarsTimelines.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "SourceMaterialEvents",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Title = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
-                    CanonType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    Year = table.Column<int>(type: "INTEGER", nullable: false),
-                    DisplayDate = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
-                    DisplayDateEnd = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
-                    SourceMaterialId = table.Column<Guid>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SourceMaterialEvents", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SourceMaterialEvents_SourceMaterials_SourceMaterialId",
-                        column: x => x.SourceMaterialId,
-                        principalTable: "SourceMaterials",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "SourceMaterialUnits",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
                     SourceMaterialId = table.Column<Guid>(type: "TEXT", nullable: false),
                     UnitType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    GroupNumber = table.Column<int>(type: "INTEGER", nullable: true),
                     Number = table.Column<int>(type: "INTEGER", nullable: false),
                     Title = table.Column<string>(type: "TEXT", maxLength: 200, nullable: true),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
@@ -131,6 +129,7 @@ namespace StarWarsTimelines.Persistence.Migrations
                     SourceMaterialId = table.Column<Guid>(type: "TEXT", nullable: false),
                     Status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
                     IsFavorite = table.Column<bool>(type: "INTEGER", nullable: false),
+                    SortOrder = table.Column<int>(type: "INTEGER", nullable: false, defaultValue: 0),
                     CreatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false),
                     UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: true)
                 },
@@ -145,6 +144,63 @@ namespace StarWarsTimelines.Persistence.Migrations
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_UserSourceMaterials_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "SourceMaterialEvents",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Title = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
+                    CanonType = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    Year = table.Column<int>(type: "INTEGER", nullable: false),
+                    DisplayDate = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    DisplayDateEnd = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
+                    SourceMaterialId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SourceMaterialUnitId = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_SourceMaterialEvents", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_SourceMaterialEvents_SourceMaterialUnits_SourceMaterialUnitId",
+                        column: x => x.SourceMaterialUnitId,
+                        principalTable: "SourceMaterialUnits",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_SourceMaterialEvents_SourceMaterials_SourceMaterialId",
+                        column: x => x.SourceMaterialId,
+                        principalTable: "SourceMaterials",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "UserSourceMaterialUnits",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    SourceMaterialUnitId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false),
+                    UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_UserSourceMaterialUnits", x => new { x.UserId, x.SourceMaterialUnitId });
+                    table.ForeignKey(
+                        name: "FK_UserSourceMaterialUnits_SourceMaterialUnits_SourceMaterialUnitId",
+                        column: x => x.SourceMaterialUnitId,
+                        principalTable: "SourceMaterialUnits",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_UserSourceMaterialUnits_Users_UserId",
                         column: x => x.UserId,
                         principalTable: "Users",
                         principalColumn: "Id",
@@ -223,32 +279,6 @@ namespace StarWarsTimelines.Persistence.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "UserSourceMaterialUnits",
-                columns: table => new
-                {
-                    UserId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    SourceMaterialUnitId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    IsCompleted = table.Column<bool>(type: "INTEGER", nullable: false),
-                    UpdatedAtUtc = table.Column<DateTime>(type: "TEXT", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_UserSourceMaterialUnits", x => new { x.UserId, x.SourceMaterialUnitId });
-                    table.ForeignKey(
-                        name: "FK_UserSourceMaterialUnits_SourceMaterialUnits_SourceMaterialUnitId",
-                        column: x => x.SourceMaterialUnitId,
-                        principalTable: "SourceMaterialUnits",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_UserSourceMaterialUnits_Users_UserId",
-                        column: x => x.UserId,
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
             migrationBuilder.CreateIndex(
                 name: "IX_Characters_Name",
                 table: "Characters",
@@ -277,14 +307,36 @@ namespace StarWarsTimelines.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_Token",
+                table: "RefreshTokens",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId",
+                table: "RefreshTokens",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_SourceMaterialEvents_SourceMaterialId",
                 table: "SourceMaterialEvents",
                 column: "SourceMaterialId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_SourceMaterialUnits_SourceMaterialId_Number",
+                name: "IX_SourceMaterialEvents_SourceMaterialUnitId",
+                table: "SourceMaterialEvents",
+                column: "SourceMaterialUnitId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_SourceMaterialUnits_SourceMaterialId_GroupNumber_Number",
                 table: "SourceMaterialUnits",
-                columns: new[] { "SourceMaterialId", "Number" },
+                columns: new[] { "SourceMaterialId", "GroupNumber", "Number" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_Email",
+                table: "Users",
+                column: "Email",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -323,6 +375,9 @@ namespace StarWarsTimelines.Persistence.Migrations
                 name: "EventVehicles");
 
             migrationBuilder.DropTable(
+                name: "RefreshTokens");
+
+            migrationBuilder.DropTable(
                 name: "UserSourceMaterials");
 
             migrationBuilder.DropTable(
@@ -341,10 +396,10 @@ namespace StarWarsTimelines.Persistence.Migrations
                 name: "Vehicles");
 
             migrationBuilder.DropTable(
-                name: "SourceMaterialUnits");
+                name: "Users");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "SourceMaterialUnits");
 
             migrationBuilder.DropTable(
                 name: "SourceMaterials");

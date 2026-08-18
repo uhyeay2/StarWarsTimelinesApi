@@ -12,8 +12,10 @@ namespace StarWarsTimelines.Application.Tests;
 public sealed class AuthServiceTests
 {
     private const string VerificationUrl = "https://localhost:4200/verify-email";
+    private static readonly JwtOptions JwtOptions = new("Issuer", "Audience", "secret-key", 120, 7);
 
     private readonly Mock<IUserRepository> _users;
+    private readonly Mock<IRefreshTokenRepository> _refreshTokens;
     private readonly Mock<ITokenService> _tokens;
     private readonly Mock<IEmailSender> _email;
     private readonly Mock<IUnitOfWork> _unitOfWork;
@@ -23,11 +25,13 @@ public sealed class AuthServiceTests
     public AuthServiceTests()
     {
         _users = new Mock<IUserRepository>();
+        _refreshTokens = new Mock<IRefreshTokenRepository>();
         _tokens = new Mock<ITokenService>();
         _email = new Mock<IEmailSender>();
         _unitOfWork = new Mock<IUnitOfWork>();
         _service = new AuthService(
             _users.Object,
+            _refreshTokens.Object,
             _tokens.Object,
             _email.Object,
             new EmailOptions(
@@ -39,6 +43,7 @@ public sealed class AuthServiceTests
                 string.Empty,
                 true,
                 VerificationUrl),
+            JwtOptions,
             _unitOfWork.Object);
     }
 
@@ -48,17 +53,22 @@ public sealed class AuthServiceTests
         var user = SeedUser("padme", "padme123", UserRole.Standard);
         _users.Setup(x => x.GetByUsernameAsync("padme", It.IsAny<CancellationToken>())).ReturnsAsync(user);
         _tokens.Setup(x => x.GenerateToken(user)).Returns("token-123");
+        _tokens.Setup(x => x.GenerateRefreshToken()).Returns("refresh-abc");
 
         var result = await _service.AuthenticateAsync("padme", "padme123");
 
         Assert.NotNull(result.Auth);
         Assert.Null(result.Failure);
-        Assert.Equal("token-123", result.Auth.Token);
+        Assert.Equal("token-123", result.Auth.AccessToken);
+        Assert.Equal("refresh-abc", result.Auth.RefreshToken);
         Assert.Equal("padme", result.Auth.User.Username);
         Assert.Equal("Padmé Amidala", result.Auth.User.DisplayName);
         Assert.Equal(UserRole.Standard, result.Auth.User.Role);
         Assert.Equal(user.Id, result.Auth.User.Id);
         _tokens.Verify(x => x.GenerateToken(user), Times.Once);
+        _refreshTokens.Verify(x => x.AddAsync(
+            It.Is<RefreshToken>(rt => rt.Token == "refresh-abc" && rt.UserId == user.Id),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -348,6 +358,122 @@ public sealed class AuthServiceTests
             _service.ResendVerificationEmailAsync("   "));
 
         Assert.Equal("usernameOrEmail", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithValidToken_RotatesTokenAndReturnsNewPair()
+    {
+        var user = SeedUser("padme", "padme123", UserRole.Standard);
+        var oldTokenValue = "old-refresh-token";
+        var stored = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Token = oldTokenValue,
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        _refreshTokens.Setup(x => x.GetByTokenAsync(oldTokenValue, It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+        _users.Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _tokens.Setup(x => x.GenerateToken(user)).Returns("new-access-token");
+        _tokens.Setup(x => x.GenerateRefreshToken()).Returns("new-refresh-token");
+
+        var result = await _service.RefreshAsync(oldTokenValue);
+
+        Assert.Equal("new-access-token", result.AccessToken);
+        Assert.Equal("new-refresh-token", result.RefreshToken);
+        Assert.Equal("padme", result.User.Username);
+        Assert.NotNull(stored.RevokedAtUtc);
+        Assert.Equal("new-refresh-token", stored.ReplacedByToken);
+        _refreshTokens.Verify(x => x.Update(stored), Times.Once);
+        _refreshTokens.Verify(x => x.AddAsync(It.Is<RefreshToken>(rt =>
+            rt.Token == "new-refresh-token" && rt.UserId == user.Id), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithBlankToken_Throws()
+    {
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.RefreshAsync("  "));
+
+        Assert.Equal("refreshToken", exception.ParamName);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithUnknownToken_Throws()
+    {
+        _refreshTokens
+            .Setup(x => x.GetByTokenAsync("unknown", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RefreshToken?)null);
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.RefreshAsync("unknown"));
+
+        Assert.Contains("invalid", exception.Message);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithRevokedToken_RevokesAllFamilyAndThrows()
+    {
+        var user = SeedUser("padme", "padme123", UserRole.Standard);
+        var stored = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Token = "revoked-token",
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
+            CreatedAtUtc = DateTime.UtcNow,
+            RevokedAtUtc = DateTime.UtcNow.AddHours(-1)
+        };
+        _refreshTokens.Setup(x => x.GetByTokenAsync("revoked-token", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.RefreshAsync("revoked-token"));
+
+        Assert.Contains("already been revoked", exception.Message);
+        _refreshTokens.Verify(x => x.RevokeAllForUserAsync(user.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WithExpiredToken_Throws()
+    {
+        var stored = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = Guid.NewGuid(),
+            Token = "expired-token",
+            ExpiresAtUtc = DateTime.UtcNow.AddHours(-1),
+            CreatedAtUtc = DateTime.UtcNow.AddDays(-8)
+        };
+        _refreshTokens.Setup(x => x.GetByTokenAsync("expired-token", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.RefreshAsync("expired-token"));
+
+        Assert.Contains("expired", exception.Message);
+    }
+
+    [Fact]
+    public async Task RefreshAsync_WhenUserDeleted_Throws()
+    {
+        var userId = Guid.NewGuid();
+        var stored = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            Token = "orphaned-token",
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(7),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        _refreshTokens.Setup(x => x.GetByTokenAsync("orphaned-token", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
+        _users.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            _service.RefreshAsync("orphaned-token"));
+
+        Assert.Contains("no longer exists", exception.Message);
     }
 
     private User SeedUser(string username, string password, UserRole role, bool emailVerified = true) =>

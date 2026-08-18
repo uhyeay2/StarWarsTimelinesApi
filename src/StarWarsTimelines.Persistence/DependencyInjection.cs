@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ILocationRepository, LocationRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();
         services.AddScoped<ISourceMaterialEventRepository, SourceMaterialEventRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         return services;
     }

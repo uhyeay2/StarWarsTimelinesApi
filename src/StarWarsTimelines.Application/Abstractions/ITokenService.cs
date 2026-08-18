@@ -13,4 +13,10 @@ public interface ITokenService
     /// <param name="user">The authenticated user to create a token for.</param>
     /// <returns>A serialized JWT bearer token.</returns>
     string GenerateToken(User user);
+
+    /// <summary>
+    /// Generates a cryptographically random opaque refresh token string.
+    /// </summary>
+    /// <returns>A random 64-byte hex string.</returns>
+    string GenerateRefreshToken();
 }

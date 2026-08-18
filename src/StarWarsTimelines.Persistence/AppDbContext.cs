@@ -78,6 +78,11 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<EventVehicle> EventVehicles => Set<EventVehicle>();
 
     /// <summary>
+    /// Gets the refresh tokens used for token rotation.
+    /// </summary>
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
+    /// <summary>
     /// Applies the entity configurations defined in this assembly to the model.
     /// </summary>
     /// <param name="modelBuilder">The model builder used to construct the EF Core model.</param>

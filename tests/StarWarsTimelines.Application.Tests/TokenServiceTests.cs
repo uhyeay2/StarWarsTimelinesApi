@@ -13,7 +13,8 @@ public sealed class TokenServiceTests
         "StarWarsTimelinesApi",
         "StarWarsTimelinesClient",
         "StarWarsTimelines-Dev-Secret-Key-Change-Me-2026",
-        120);
+        120,
+        7);
 
     [Fact]
     public void GenerateToken_CreatesReadableTokenWithUserClaims()
@@ -44,5 +45,21 @@ public sealed class TokenServiceTests
         Assert.Equal(user.Id.ToString(), principal.FindFirstValue(ClaimTypes.NameIdentifier));
         Assert.Equal(user.Username, principal.FindFirstValue(ClaimTypes.Name));
         Assert.True(principal.IsInRole(UserRole.Standard.ToString()));
+    }
+
+    [Fact]
+    public void GenerateRefreshToken_ReturnsUniqueHexStrings()
+    {
+        var service = new TokenService(_options);
+
+        var token1 = service.GenerateRefreshToken();
+        var token2 = service.GenerateRefreshToken();
+
+        Assert.NotEmpty(token1);
+        Assert.NotEqual(token1, token2);
+        Assert.Matches("^[0-9a-f]+$", token1);
+        Assert.Matches("^[0-9a-f]+$", token2);
+        Assert.Equal(128, token1.Length);
+        Assert.Equal(128, token2.Length);
     }
 }

@@ -11,8 +11,8 @@ using StarWarsTimelines.Persistence;
 namespace StarWarsTimelines.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260815042310_AddLibrarySortOrder")]
-    partial class AddLibrarySortOrder
+    [Migration("20260817224716_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -103,6 +103,43 @@ namespace StarWarsTimelines.Persistence.Migrations
                     b.ToTable("Locations", (string)null);
                 });
 
+            modelBuilder.Entity("StarWarsTimelines.Domain.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ReplacedByToken")
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("RevokedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens", (string)null);
+                });
+
             modelBuilder.Entity("StarWarsTimelines.Domain.Entities.SourceMaterial", b =>
                 {
                     b.Property<Guid>("Id")
@@ -157,6 +194,9 @@ namespace StarWarsTimelines.Persistence.Migrations
                     b.Property<Guid>("SourceMaterialId")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("SourceMaterialUnitId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -169,6 +209,8 @@ namespace StarWarsTimelines.Persistence.Migrations
 
                     b.HasIndex("SourceMaterialId");
 
+                    b.HasIndex("SourceMaterialUnitId");
+
                     b.ToTable("SourceMaterialEvents", (string)null);
                 });
 
@@ -180,6 +222,9 @@ namespace StarWarsTimelines.Persistence.Migrations
 
                     b.Property<DateTime>("CreatedAtUtc")
                         .HasColumnType("TEXT");
+
+                    b.Property<int?>("GroupNumber")
+                        .HasColumnType("INTEGER");
 
                     b.Property<int>("Number")
                         .HasColumnType("INTEGER");
@@ -198,7 +243,7 @@ namespace StarWarsTimelines.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SourceMaterialId", "Number")
+                    b.HasIndex("SourceMaterialId", "GroupNumber", "Number")
                         .IsUnique();
 
                     b.ToTable("SourceMaterialUnits", (string)null);
@@ -218,6 +263,21 @@ namespace StarWarsTimelines.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EmailVerificationTokenExpiresAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EmailVerificationTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EmailVerifiedAtUtc")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -234,6 +294,9 @@ namespace StarWarsTimelines.Persistence.Migrations
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
 
                     b.HasIndex("Username")
                         .IsUnique();
@@ -380,7 +443,14 @@ namespace StarWarsTimelines.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("StarWarsTimelines.Domain.Entities.SourceMaterialUnit", "SourceMaterialUnit")
+                        .WithMany()
+                        .HasForeignKey("SourceMaterialUnitId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("SourceMaterial");
+
+                    b.Navigation("SourceMaterialUnit");
                 });
 
             modelBuilder.Entity("StarWarsTimelines.Domain.Entities.SourceMaterialUnit", b =>

@@ -17,9 +17,11 @@ public sealed class AuthService : IAuthService
     private static readonly TimeSpan VerificationTokenLifetime = TimeSpan.FromHours(24);
 
     private readonly IUserRepository _users;
+    private readonly IRefreshTokenRepository _refreshTokens;
     private readonly ITokenService _tokens;
     private readonly IEmailSender _email;
     private readonly EmailOptions _emailOptions;
+    private readonly JwtOptions _jwtOptions;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IPasswordHasher<object> _hasher = new PasswordHasher<object>();
 
@@ -27,21 +29,27 @@ public sealed class AuthService : IAuthService
     /// Creates a new instance of the <see cref="AuthService"/>.
     /// </summary>
     /// <param name="users">The repository used to look up and persist user accounts.</param>
+    /// <param name="refreshTokens">The repository used to persist refresh tokens.</param>
     /// <param name="tokens">The service used to generate bearer tokens.</param>
     /// <param name="email">The sender used to deliver verification emails.</param>
     /// <param name="emailOptions">The configuration used to build verification links.</param>
+    /// <param name="jwtOptions">The JWT configuration used to determine refresh token expiry.</param>
     /// <param name="unitOfWork">The unit of work used to commit account changes.</param>
     public AuthService(
         IUserRepository users,
+        IRefreshTokenRepository refreshTokens,
         ITokenService tokens,
         IEmailSender email,
         EmailOptions emailOptions,
+        JwtOptions jwtOptions,
         IUnitOfWork unitOfWork)
     {
         _users = users;
+        _refreshTokens = refreshTokens;
         _tokens = tokens;
         _email = email;
         _emailOptions = emailOptions;
+        _jwtOptions = jwtOptions;
         _unitOfWork = unitOfWork;
     }
 
@@ -69,7 +77,8 @@ public sealed class AuthService : IAuthService
         }
 
         var token = _tokens.GenerateToken(user);
-        return AuthenticateResult.Succeeded(new AuthResponse(token, UserResponse.FromEntity(user)));
+        var refreshToken = await IssueRefreshTokenAsync(user, cancellationToken);
+        return AuthenticateResult.Succeeded(new AuthResponse(token, refreshToken, UserResponse.FromEntity(user)));
     }
 
     /// <inheritdoc />
@@ -177,6 +186,71 @@ public sealed class AuthService : IAuthService
 
         _users.Update(user);
         await SendVerificationEmailAsync(user, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            throw new ArgumentException("A refresh token is required.", nameof(refreshToken));
+        }
+
+        var stored = await _refreshTokens.GetByTokenAsync(refreshToken, cancellationToken);
+        if (stored is null)
+        {
+            throw new ArgumentException("The refresh token is invalid.", nameof(refreshToken));
+        }
+
+        if (stored.RevokedAtUtc is not null)
+        {
+            // Potential token-reuse attack — revoke the entire family.
+            await _refreshTokens.RevokeAllForUserAsync(stored.UserId, cancellationToken);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            throw new ArgumentException("The refresh token has already been revoked.", nameof(refreshToken));
+        }
+
+        if (stored.ExpiresAtUtc < DateTime.UtcNow)
+        {
+            throw new ArgumentException("The refresh token has expired.", nameof(refreshToken));
+        }
+
+        var user = await _users.GetByIdAsync(stored.UserId, cancellationToken);
+        if (user is null)
+        {
+            throw new ArgumentException("The user associated with this token no longer exists.", nameof(refreshToken));
+        }
+
+        // Rotate: revoke old, issue new.
+        var newRefreshTokenValue = await IssueRefreshTokenAsync(user, cancellationToken);
+        stored.RevokedAtUtc = DateTime.UtcNow;
+        stored.ReplacedByToken = newRefreshTokenValue;
+        _refreshTokens.Update(stored);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var accessToken = _tokens.GenerateToken(user);
+        return new AuthResponse(accessToken, newRefreshTokenValue, UserResponse.FromEntity(user));
+    }
+
+    /// <summary>
+    /// Generates a refresh token, persists it, and returns the opaque string.
+    /// </summary>
+    /// <param name="user">The user to issue the token for.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>The opaque refresh token string.</returns>
+    private async Task<string> IssueRefreshTokenAsync(User user, CancellationToken cancellationToken)
+    {
+        var value = _tokens.GenerateRefreshToken();
+        var entity = new RefreshToken
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Token = value,
+            ExpiresAtUtc = DateTime.UtcNow.AddDays(_jwtOptions.RefreshTokenExpiryDays),
+            CreatedAtUtc = DateTime.UtcNow
+        };
+        await _refreshTokens.AddAsync(entity, cancellationToken);
+        return value;
     }
 
     /// <summary>

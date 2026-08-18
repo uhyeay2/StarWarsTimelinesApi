@@ -21,7 +21,7 @@ public sealed class AuthEndpointsTests : ApiTestBase
         var auth = await response.Content.ReadFromJsonAsync<AuthResponse>();
 
         Assert.NotNull(auth);
-        Assert.False(string.IsNullOrEmpty(auth.Token));
+        Assert.False(string.IsNullOrEmpty(auth.AccessToken));
         Assert.NotNull(auth.User);
         Assert.Equal("padme", auth.User.Username);
         Assert.Equal("Padmé Amidala", auth.User.DisplayName);

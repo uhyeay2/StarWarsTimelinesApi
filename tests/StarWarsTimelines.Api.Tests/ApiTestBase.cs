@@ -31,7 +31,7 @@ public abstract class ApiTestBase : IClassFixture<StarWarsTimelinesApiFactory>
         var auth = (await loginResponse.Content.ReadFromJsonAsync<AuthResponse>())!;
 
         var client = Factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", auth.AccessToken);
         return client;
     }
 

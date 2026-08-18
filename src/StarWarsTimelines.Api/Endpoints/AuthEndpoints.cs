@@ -100,6 +100,22 @@ public static class AuthEndpoints
         .WithResponseExamples(
             (StatusCodes.Status400BadRequest, "Blank identifier", "The username or email address is required.", ExampleValues.BadRequest("A username or email address is required.")));
 
+        // Exchanges a valid refresh token for a new access/refresh token pair.
+        group.MapPost("/refresh", async (RefreshTokenRequest request, IAuthService service, CancellationToken ct) =>
+        {
+            var result = await service.RefreshAsync(request.RefreshToken, ct);
+            return Results.Ok(result);
+        })
+        .WithName("RefreshToken")
+        .Produces<AuthResponse>(StatusCodes.Status200OK, "application/json")
+        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest, "application/json")
+        .WithRequestExamples(
+            ("Valid refresh token", "A non-expired, non-revoked refresh token.", ExampleValues.ValidRefreshToken),
+            ("Expired refresh token", "A refresh token whose expiry has passed.", ExampleValues.ExpiredRefreshToken))
+        .WithResponseExamples(
+            (StatusCodes.Status200OK, "Rotated", "A new access token and refresh token pair.", ExampleValues.ValidAuthResponse),
+            (StatusCodes.Status400BadRequest, "Invalid token", "The refresh token is invalid, revoked, or expired.", ExampleValues.BadRequest("The refresh token has expired.")));
+
         return group;
     }
 }

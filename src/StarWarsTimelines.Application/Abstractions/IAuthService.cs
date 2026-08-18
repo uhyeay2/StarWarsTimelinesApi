@@ -48,4 +48,14 @@ public interface IAuthService
     /// </remarks>
     /// <exception cref="ArgumentException">Thrown when the identifier is blank.</exception>
     Task ResendVerificationEmailAsync(string usernameOrEmail, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Exchanges a valid refresh token for a new access/refresh token pair.
+    /// The old refresh token is revoked and cannot be reused.
+    /// </summary>
+    /// <param name="refreshToken">The opaque refresh token string.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>An <see cref="AuthResponse"/> carrying the new access token, refresh token, and user.</returns>
+    /// <exception cref="ArgumentException">Thrown when the refresh token is missing, unknown, revoked, or expired.</exception>
+    Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default);
 }
