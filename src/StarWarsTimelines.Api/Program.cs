@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
+using Microsoft.OpenApi;
 using StarWarsTimelines.Api;
 using StarWarsTimelines.Api.Endpoints;
 using StarWarsTimelines.Api.OpenApi;
@@ -30,7 +31,23 @@ try
         preserveStaticLogger: true);
 
     builder.Services.AddEndpointsApiExplorer();
-    builder.Services.AddSwaggerGen(options => options.OperationFilter<ExampleOperationFilter>());
+    builder.Services.AddSwaggerGen(options =>
+    {
+        options.OperationFilter<ExampleOperationFilter>();
+        options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+        {
+            Name = "Authorization",
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header,
+            Description = "Enter your JWT token"
+        });
+        options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+        });
+    });
     builder.Services.AddProblemDetails();
     builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 
@@ -50,6 +67,7 @@ try
         ?? throw new InvalidOperationException("Email settings are not configured.");
     builder.Services.AddSingleton(emailOptions);
     builder.Services.AddSingleton<IEmailSender, SmtpEmailSender>();
+    builder.Services.AddSingleton<CatalogEventBroadcaster>();
 
     builder.Services
         .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -137,6 +155,7 @@ try
     app.MapVehicleEndpoints();
     app.MapSourceMaterialEventEndpoints();
     app.MapSourceMaterialUnitEndpoints();
+    app.MapCatalogEventEndpoints();
 
     using (var scope = app.Services.CreateScope())
     {

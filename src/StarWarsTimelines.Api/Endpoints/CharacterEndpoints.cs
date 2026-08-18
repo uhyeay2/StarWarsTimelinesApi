@@ -47,9 +47,10 @@ public static class CharacterEndpoints
             (StatusCodes.Status404NotFound, "Character not found", "No character has the requested identifier.", ExampleValues.NotFound("No character with the requested identifier was found.")));
 
         // Creates a catalog entry; restricted to administrators.
-        group.MapPost("/", async (CreateCharacterRequest request, ICharacterService service, CancellationToken ct) =>
+        group.MapPost("/", async (CreateCharacterRequest request, ICharacterService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var created = await service.CreateAsync(request, ct);
+            await broadcaster.BroadcastAsync(new CatalogEvent("characters", "created", created.Id));
             return Results.Created($"/api/characters/{created.Id}", created);
         })
         .WithName("CreateCharacter")
@@ -67,9 +68,13 @@ public static class CharacterEndpoints
             (StatusCodes.Status403Forbidden, "Not an administrator", "Only administrators can modify the catalog.", ExampleValues.Forbidden("The caller does not have the Admin role.")));
 
         // Partially updates a catalog entry; restricted to administrators.
-        group.MapPut("/{id:guid}", async (Guid id, UpdateCharacterRequest request, ICharacterService service, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, UpdateCharacterRequest request, ICharacterService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var updated = await service.UpdateAsync(id, request, ct);
+            if (updated is not null)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("characters", "updated", id));
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
         .WithName("UpdateCharacter")
@@ -89,9 +94,13 @@ public static class CharacterEndpoints
             (StatusCodes.Status404NotFound, "Character not found", "No character has the requested identifier.", ExampleValues.NotFound("No character with the requested identifier was found.")));
 
         // Deletes a catalog entry; restricted to administrators.
-        group.MapDelete("/{id:guid}", async (Guid id, ICharacterService service, CancellationToken ct) =>
+        group.MapDelete("/{id:guid}", async (Guid id, ICharacterService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var deleted = await service.DeleteAsync(id, ct);
+            if (deleted)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("characters", "deleted", id));
+            }
             return deleted ? Results.NoContent() : Results.NotFound();
         })
         .WithName("DeleteCharacter")

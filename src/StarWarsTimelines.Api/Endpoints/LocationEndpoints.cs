@@ -47,9 +47,10 @@ public static class LocationEndpoints
             (StatusCodes.Status404NotFound, "Location not found", "No location has the requested identifier.", ExampleValues.NotFound("No location with the requested identifier was found.")));
 
         // Creates a catalog entry; restricted to administrators.
-        group.MapPost("/", async (CreateLocationRequest request, ILocationService service, CancellationToken ct) =>
+        group.MapPost("/", async (CreateLocationRequest request, ILocationService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var created = await service.CreateAsync(request, ct);
+            await broadcaster.BroadcastAsync(new CatalogEvent("locations", "created", created.Id));
             return Results.Created($"/api/locations/{created.Id}", created);
         })
         .WithName("CreateLocation")
@@ -67,9 +68,13 @@ public static class LocationEndpoints
             (StatusCodes.Status403Forbidden, "Not an administrator", "Only administrators can modify the catalog.", ExampleValues.Forbidden("The caller does not have the Admin role.")));
 
         // Partially updates a catalog entry; restricted to administrators.
-        group.MapPut("/{id:guid}", async (Guid id, UpdateLocationRequest request, ILocationService service, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, UpdateLocationRequest request, ILocationService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var updated = await service.UpdateAsync(id, request, ct);
+            if (updated is not null)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("locations", "updated", id));
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
         .WithName("UpdateLocation")
@@ -89,9 +94,13 @@ public static class LocationEndpoints
             (StatusCodes.Status404NotFound, "Location not found", "No location has the requested identifier.", ExampleValues.NotFound("No location with the requested identifier was found.")));
 
         // Deletes a catalog entry; restricted to administrators.
-        group.MapDelete("/{id:guid}", async (Guid id, ILocationService service, CancellationToken ct) =>
+        group.MapDelete("/{id:guid}", async (Guid id, ILocationService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var deleted = await service.DeleteAsync(id, ct);
+            if (deleted)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("locations", "deleted", id));
+            }
             return deleted ? Results.NoContent() : Results.NotFound();
         })
         .WithName("DeleteLocation")

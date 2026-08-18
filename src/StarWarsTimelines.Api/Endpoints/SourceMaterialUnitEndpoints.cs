@@ -40,9 +40,13 @@ public static class SourceMaterialUnitEndpoints
             (StatusCodes.Status404NotFound, "Source material not found", "No source material has the requested identifier.", ExampleValues.NotFound("No source material with the requested identifier was found.")));
 
         // Creates a unit for a source material; restricted to administrators.
-        group.MapPost("/", async (Guid sourceMaterialId, CreateSourceMaterialUnitRequest request, ISourceMaterialUnitService service, CancellationToken ct) =>
+        group.MapPost("/", async (Guid sourceMaterialId, CreateSourceMaterialUnitRequest request, ISourceMaterialUnitService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var created = await service.CreateAsync(sourceMaterialId, request, ct);
+            if (created is not null)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("source-material-units", "created", created.Id));
+            }
             return created is null
                 ? Results.NotFound()
                 : Results.Created($"/api/source-materials/{sourceMaterialId}/units/{created.Id}", created);
@@ -64,9 +68,13 @@ public static class SourceMaterialUnitEndpoints
             (StatusCodes.Status404NotFound, "Source material not found", "No source material has the requested identifier.", ExampleValues.NotFound("No source material with the requested identifier was found.")));
 
         // Partially updates a unit; restricted to administrators.
-        group.MapPut("/{unitId:guid}", async (Guid unitId, UpdateSourceMaterialUnitRequest request, ISourceMaterialUnitService service, CancellationToken ct) =>
+        group.MapPut("/{unitId:guid}", async (Guid unitId, UpdateSourceMaterialUnitRequest request, ISourceMaterialUnitService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var updated = await service.UpdateAsync(unitId, request, ct);
+            if (updated is not null)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("source-material-units", "updated", unitId));
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
         .WithName("UpdateSourceMaterialUnit")
@@ -86,9 +94,13 @@ public static class SourceMaterialUnitEndpoints
             (StatusCodes.Status404NotFound, "Unit not found", "No unit has the requested identifier.", ExampleValues.NotFound("No unit with the requested identifier was found.")));
 
         // Deletes a unit; restricted to administrators.
-        group.MapDelete("/{unitId:guid}", async (Guid unitId, ISourceMaterialUnitService service, CancellationToken ct) =>
+        group.MapDelete("/{unitId:guid}", async (Guid unitId, ISourceMaterialUnitService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var deleted = await service.DeleteAsync(unitId, ct);
+            if (deleted)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("source-material-units", "deleted", unitId));
+            }
             return deleted ? Results.NoContent() : Results.NotFound();
         })
         .WithName("DeleteSourceMaterialUnit")

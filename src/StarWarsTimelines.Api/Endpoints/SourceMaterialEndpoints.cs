@@ -48,9 +48,10 @@ public static class SourceMaterialEndpoints
             (StatusCodes.Status404NotFound, "Source material not found", "No source material has the requested identifier.", ExampleValues.NotFound("No source material with the requested identifier was found.")));
 
         // Creates a catalog entry; restricted to administrators.
-        group.MapPost("/", async (CreateSourceMaterialRequest request, ISourceMaterialService service, CancellationToken ct) =>
+        group.MapPost("/", async (CreateSourceMaterialRequest request, ISourceMaterialService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var created = await service.CreateAsync(request, ct);
+            await broadcaster.BroadcastAsync(new CatalogEvent("source-materials", "created", created.Id));
             return Results.Created($"/api/source-materials/{created.Id}", created);
         })
         .WithName("CreateSourceMaterial")
@@ -68,9 +69,13 @@ public static class SourceMaterialEndpoints
             (StatusCodes.Status403Forbidden, "Not an administrator", "Only administrators can modify the catalog.", ExampleValues.Forbidden("The caller does not have the Admin role.")));
 
         // Partially updates a catalog entry; restricted to administrators.
-        group.MapPut("/{id:guid}", async (Guid id, UpdateSourceMaterialRequest request, ISourceMaterialService service, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, UpdateSourceMaterialRequest request, ISourceMaterialService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var updated = await service.UpdateAsync(id, request, ct);
+            if (updated is not null)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("source-materials", "updated", id));
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
         .WithName("UpdateSourceMaterial")
@@ -90,9 +95,13 @@ public static class SourceMaterialEndpoints
             (StatusCodes.Status404NotFound, "Source material not found", "No source material has the requested identifier.", ExampleValues.NotFound("No source material with the requested identifier was found.")));
 
         // Deletes a catalog entry; restricted to administrators.
-        group.MapDelete("/{id:guid}", async (Guid id, ISourceMaterialService service, CancellationToken ct) =>
+        group.MapDelete("/{id:guid}", async (Guid id, ISourceMaterialService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var deleted = await service.DeleteAsync(id, ct);
+            if (deleted)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("source-materials", "deleted", id));
+            }
             return deleted ? Results.NoContent() : Results.NotFound();
         })
         .WithName("DeleteSourceMaterial")

@@ -47,9 +47,10 @@ public static class VehicleEndpoints
             (StatusCodes.Status404NotFound, "Vehicle not found", "No vehicle has the requested identifier.", ExampleValues.NotFound("No vehicle with the requested identifier was found.")));
 
         // Creates a catalog entry; restricted to administrators.
-        group.MapPost("/", async (CreateVehicleRequest request, IVehicleService service, CancellationToken ct) =>
+        group.MapPost("/", async (CreateVehicleRequest request, IVehicleService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var created = await service.CreateAsync(request, ct);
+            await broadcaster.BroadcastAsync(new CatalogEvent("vehicles", "created", created.Id));
             return Results.Created($"/api/vehicles/{created.Id}", created);
         })
         .WithName("CreateVehicle")
@@ -67,9 +68,13 @@ public static class VehicleEndpoints
             (StatusCodes.Status403Forbidden, "Not an administrator", "Only administrators can modify the catalog.", ExampleValues.Forbidden("The caller does not have the Admin role.")));
 
         // Partially updates a catalog entry; restricted to administrators.
-        group.MapPut("/{id:guid}", async (Guid id, UpdateVehicleRequest request, IVehicleService service, CancellationToken ct) =>
+        group.MapPut("/{id:guid}", async (Guid id, UpdateVehicleRequest request, IVehicleService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var updated = await service.UpdateAsync(id, request, ct);
+            if (updated is not null)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("vehicles", "updated", id));
+            }
             return updated is null ? Results.NotFound() : Results.Ok(updated);
         })
         .WithName("UpdateVehicle")
@@ -89,9 +94,13 @@ public static class VehicleEndpoints
             (StatusCodes.Status404NotFound, "Vehicle not found", "No vehicle has the requested identifier.", ExampleValues.NotFound("No vehicle with the requested identifier was found.")));
 
         // Deletes a catalog entry; restricted to administrators.
-        group.MapDelete("/{id:guid}", async (Guid id, IVehicleService service, CancellationToken ct) =>
+        group.MapDelete("/{id:guid}", async (Guid id, IVehicleService service, CatalogEventBroadcaster broadcaster, CancellationToken ct) =>
         {
             var deleted = await service.DeleteAsync(id, ct);
+            if (deleted)
+            {
+                await broadcaster.BroadcastAsync(new CatalogEvent("vehicles", "deleted", id));
+            }
             return deleted ? Results.NoContent() : Results.NotFound();
         })
         .WithName("DeleteVehicle")
