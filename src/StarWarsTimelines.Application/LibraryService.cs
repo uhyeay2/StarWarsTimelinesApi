@@ -47,7 +47,7 @@ public sealed class LibraryService : ILibraryService
     }
 
     /// <inheritdoc />
-    public async Task<LibraryItemResponse?> AddAsync(Guid userId, Guid sourceMaterialId, CancellationToken cancellationToken = default)
+    public async Task<LibraryItemResponse?> AddAsync(Guid userId, Guid sourceMaterialId, TrackingStatus? initialStatus = null, CancellationToken cancellationToken = default)
     {
         var source = await _catalog.GetByIdAsync(sourceMaterialId, cancellationToken);
         if (source is null)
@@ -67,7 +67,7 @@ public sealed class LibraryService : ILibraryService
             {
                 UserId = userId,
                 SourceMaterialId = sourceMaterialId,
-                Status = TrackingStatus.WishListed,
+                Status = initialStatus ?? TrackingStatus.WishListed,
                 IsFavorite = false,
                 SortOrder = await _repository.GetNextSortOrderAsync(userId, cancellationToken),
                 CreatedAtUtc = DateTime.UtcNow
@@ -100,14 +100,49 @@ public sealed class LibraryService : ILibraryService
 
         if (request.Status is not null && item.SourceMaterial.SourceMaterialUnits.Count > 0)
         {
-            throw new ArgumentException(
-                "Status is derived from unit progress and cannot be set directly for this source material.",
-                nameof(request.Status));
-        }
+            if (request.UnitId is null)
+            {
+                throw new ArgumentException(
+                    "UnitId is required when setting status on a source material that has sub-units.",
+                    nameof(request.UnitId));
+            }
 
-        if (request.Status is TrackingStatus status)
+            var unit = item.SourceMaterial.SourceMaterialUnits.SingleOrDefault(u => u.Id == request.UnitId);
+            if (unit is null)
+            {
+                throw new ArgumentException(
+                    "The specified unit does not belong to this source material.",
+                    nameof(request.UnitId));
+            }
+
+            var isCompleted = request.Status is TrackingStatus.Completed;
+
+            // If updating a season unit, cascade the status to all episodes in that season
+            if (unit.GroupNumber.HasValue)
+            {
+                // This is a season unit - update all episodes in that season
+                var seasonNumber = unit.GroupNumber.Value;
+                var episodesInSeason = item.SourceMaterial.SourceMaterialUnits
+                    .Where(u => u.GroupNumber == seasonNumber && u.UnitType == UnitType.Episode)
+                    .ToList();
+
+                foreach (var episode in episodesInSeason)
+                {
+                    await SetUnitProgressCoreAsync(userId, episode.Id, isCompleted, cancellationToken);
+                }
+            }
+            else
+            {
+                // This is an episode unit - update just that episode
+                await SetUnitProgressCoreAsync(userId, request.UnitId.Value, isCompleted, cancellationToken);
+            }
+        }
+        else
         {
-            item.Status = status;
+            if (request.Status is TrackingStatus status)
+            {
+                item.Status = status;
+            }
         }
 
         if (request.IsFavorite is bool isFavorite)
@@ -186,6 +221,22 @@ public sealed class LibraryService : ILibraryService
             return null;
         }
 
+        await SetUnitProgressCoreAsync(userId, unitId, isCompleted, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return LibraryUnitResponse.FromEntity(unit, isCompleted);
+    }
+
+    /// <summary>
+    /// Creates or updates a unit progress record without additional validation.
+    /// Used internally by both <see cref="SetUnitProgressAsync"/> and <see cref="UpdateAsync"/>.
+    /// </summary>
+    /// <param name="userId">The identifier of the user whose progress is updated.</param>
+    /// <param name="unitId">The identifier of the unit to update.</param>
+    /// <param name="isCompleted">Whether the unit is marked as completed.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    private async Task SetUnitProgressCoreAsync(Guid userId, Guid unitId, bool isCompleted, CancellationToken cancellationToken)
+    {
         var record = await _progress.GetByIdAsync(userId, unitId, cancellationToken);
         if (record is null)
         {
@@ -205,10 +256,6 @@ public sealed class LibraryService : ILibraryService
             record.UpdatedAtUtc = DateTime.UtcNow;
             _progress.Update(record);
         }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return LibraryUnitResponse.FromEntity(unit, isCompleted);
     }
 
     /// <summary>
@@ -234,9 +281,13 @@ public sealed class LibraryService : ILibraryService
     private static LibraryItemResponse MapItem(UserSourceMaterial item, IReadOnlyDictionary<Guid, bool> progress)
     {
         var units = item.SourceMaterial.SourceMaterialUnits.OrderBy(u => u.GroupNumber).ThenBy(u => u.Number).ToList();
+
+        // Use the actual UnitType of the first unit to determine derivation hierarchy
+        var unitType = units.FirstOrDefault()?.UnitType ?? UnitType.Episode;
+
         return LibraryItemResponse.FromEntity(
             item,
-            DeriveStatus(item, units, progress),
+            DeriveStatus(item, units, progress, unitType),
             units.Select(u => LibraryUnitResponse.FromEntity(u, progress.GetValueOrDefault(u.Id))).ToList());
     }
 
@@ -247,25 +298,59 @@ public sealed class LibraryService : ILibraryService
     /// <see cref="TrackingStatus.Completed"/>, and anything in between means <see cref="TrackingStatus.InProgress"/>.
     /// </summary>
     /// <param name="item">The library entity whose stored status is used as a fallback for materials without units.</param>
-    /// <param name="units">The material's sub-units.</param>
+    /// <param name="units">The material's sub-units (could be episodes, seasons, or a mix).</param>
     /// <param name="progress">The user's unit progress keyed by unit identifier.</param>
+    /// <param name="unitType">The type of the top-level units (used to determine derivation hierarchy).</param>
     /// <returns>The derived <see cref="TrackingStatus"/>.</returns>
     private static TrackingStatus DeriveStatus(
         UserSourceMaterial item,
         IReadOnlyCollection<SourceMaterialUnit> units,
-        IReadOnlyDictionary<Guid, bool> progress)
+        IReadOnlyDictionary<Guid, bool> progress,
+        UnitType? unitType = null)
     {
         if (units.Count == 0)
         {
             return item.Status;
         }
 
-        var completed = units.Count(u => progress.GetValueOrDefault(u.Id));
-        return completed switch
+        // Group units by their group number (season number)
+        var groupedBySeason = units
+            .Where(u => u.GroupNumber.HasValue)
+            .GroupBy(u => u.GroupNumber!.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // If we have season-level units, derive season status first
+        if (unitType.HasValue && unitType.Value == UnitType.Season && groupedBySeason.Count > 0)
         {
-            0 => TrackingStatus.WishListed,
-            _ when completed == units.Count => TrackingStatus.Completed,
-            _ => TrackingStatus.InProgress
-        };
+            // Derive status for each season from its episodes
+            var seasonCompletedCounts = new Dictionary<int, int>();
+            foreach (var seasonUnits in groupedBySeason.Values)
+            {
+                var seasonCompleted = seasonUnits.Count(u => progress.GetValueOrDefault(u.Id));
+                seasonCompletedCounts[seasonUnits[0].GroupNumber!.Value] = seasonCompleted;
+            }
+
+            // Show status is derived from seasons:
+            // All completed → Completed, None completed → WishListed, else InProgress
+            var allSeasons = groupedBySeason.Keys.ToList();
+            var totalCompleted = seasonCompletedCounts.Values.Sum();
+            var totalSeasons = seasonCompletedCounts.Count;
+
+            if (totalCompleted == totalSeasons)
+            {
+                return TrackingStatus.Completed;
+            }
+            if (totalCompleted == 0)
+            {
+                return TrackingStatus.WishListed;
+            }
+            return TrackingStatus.InProgress;
+        }
+
+        // Original derivation for episode-level units (no grouping or non-season units)
+        var completed = units.Count(u => progress.GetValueOrDefault(u.Id));
+        if (completed == 0) return TrackingStatus.WishListed;
+        if (completed == units.Count) return TrackingStatus.Completed;
+        return TrackingStatus.InProgress;
     }
 }

@@ -47,7 +47,7 @@ public static class LibraryEndpoints
             {
                 return Results.Forbid();
             }
-            var created = await service.AddAsync(userId, request.SourceMaterialId, ct);
+            var created = await service.AddAsync(userId, request.SourceMaterialId, request.Status, ct);
             return created is null
                 ? Results.NotFound()
                 : Results.Created($"/api/users/{userId}/source-materials/{created.SourceMaterialId}", created);
@@ -125,7 +125,7 @@ public static class LibraryEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithRequestExamples(
             ("Mark favorite", "Leaves the status unchanged and toggles the favorite flag.", new UpdateLibraryItemRequest(null, true)),
-            ("Invalid status", "Rejected when the source material has sub-units and its status is derived from unit progress.", new UpdateLibraryItemRequest(TrackingStatus.Completed, null)))
+            ("Status without UnitId", "Rejected when the source material has sub-units and no UnitId is provided.", new UpdateLibraryItemRequest(TrackingStatus.Completed, null)))
         .WithResponseExamples(
             (StatusCodes.Status200OK, "Item updated", "The library item after the update.", new LibraryItemResponse(
                 new Guid("00000000-0000-0000-0000-000000000010"),
@@ -140,7 +140,7 @@ public static class LibraryEndpoints
                     new(new Guid("00000000-0000-0000-0000-500000000002"), UnitType.Episode, 1, 2, null, true),
                     new(new Guid("00000000-0000-0000-0000-500000000003"), UnitType.Episode, 1, 3, null, true)
                 })),
-            (StatusCodes.Status400BadRequest, "Invalid status", "The status cannot be set on a source material that has sub-units.", ExampleValues.BadRequest("The status is derived from unit progress and cannot be set directly.")),
+            (StatusCodes.Status400BadRequest, "Missing UnitId", "The UnitId is required when setting status on a unit-based material.", ExampleValues.BadRequest("UnitId is required when setting status on a source material that has sub-units.")),
             (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can modify a library.", ExampleValues.Forbidden("The caller does not own this library.")),
             (StatusCodes.Status404NotFound, "Item not found", "The source material is not tracked in this library.", ExampleValues.NotFound("The source material is not tracked in this library.")));
 

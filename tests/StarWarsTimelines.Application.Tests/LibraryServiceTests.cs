@@ -53,6 +53,22 @@ public sealed class LibraryServiceTests
         return source;
     }
 
+    private static SourceMaterial SourceWithUnitsAndMedium(int count, Medium medium, UnitType unitType)
+    {
+        var source = Source();
+        source.Medium = medium;
+        source.SourceMaterialUnits = Enumerable.Range(1, count)
+            .Select(number => new SourceMaterialUnit
+            {
+                Id = Guid.NewGuid(),
+                SourceMaterialId = source.Id,
+                UnitType = unitType,
+                Number = number
+            })
+            .ToList();
+        return source;
+    }
+
     private static UserSourceMaterial Item(Guid userId, SourceMaterial source, TrackingStatus status) =>
         new()
         {
@@ -476,7 +492,7 @@ public sealed class LibraryServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ForUnitBasedMaterial_WhenStatusProvided_ThrowsAndNeverSaves()
+    public async Task UpdateAsync_ForUnitBasedMaterial_WhenStatusProvided_WithoutUnitId_ThrowsAndNeverSaves()
     {
         var source = SourceWithUnits(1);
         var userId = Guid.NewGuid();
@@ -488,7 +504,7 @@ public sealed class LibraryServiceTests
         var exception = await Assert.ThrowsAsync<ArgumentException>(
             () => _service.UpdateAsync(userId, source.Id, new UpdateLibraryItemRequest(TrackingStatus.Completed, null)));
 
-        Assert.Equal("Status", exception.ParamName);
+        Assert.Equal("UnitId", exception.ParamName);
         _repository.Verify(x => x.Update(It.IsAny<UserSourceMaterial>()), Times.Never);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -656,5 +672,110 @@ public sealed class LibraryServiceTests
         _progress.Verify(x => x.Update(record), Times.Once);
         _progress.Verify(x => x.AddAsync(It.IsAny<UserSourceMaterialUnit>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddAsync_WithStatus_UsesProvidedStatus()
+    {
+        var source = Source();
+        var userId = Guid.NewGuid();
+        var addedItem = Item(userId, source, TrackingStatus.InProgress);
+        _catalog
+            .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(source);
+        _repository
+            .SetupSequence(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserSourceMaterial?)null)
+            .ReturnsAsync(addedItem);
+        _repository
+            .Setup(x => x.GetNextSortOrderAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        var result = await _service.AddAsync(userId, source.Id, TrackingStatus.InProgress);
+
+        Assert.NotNull(result);
+        Assert.Equal(TrackingStatus.InProgress, result!.Status);
+        _repository.Verify(
+            x => x.AddAsync(It.Is<UserSourceMaterial>(u => u.Status == TrackingStatus.InProgress), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task AddAsync_WithoutStatus_DefaultsToWishListed()
+    {
+        var source = Source();
+        var userId = Guid.NewGuid();
+        var addedItem = Item(userId, source, TrackingStatus.WishListed);
+        _catalog
+            .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(source);
+        _repository
+            .SetupSequence(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserSourceMaterial?)null)
+            .ReturnsAsync(addedItem);
+        _repository
+            .Setup(x => x.GetNextSortOrderAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(0);
+
+        var result = await _service.AddAsync(userId, source.Id);
+
+        Assert.NotNull(result);
+        Assert.Equal(TrackingStatus.WishListed, result!.Status);
+        _repository.Verify(
+            x => x.AddAsync(It.Is<UserSourceMaterial>(u => u.Status == TrackingStatus.WishListed), It.IsAny<CancellationToken>()),
+            Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ForShow_WithUnitId_SetsSingleUnitAndSaves()
+    {
+        var source = SourceWithUnitsAndMedium(3, Medium.AnimatedShow, UnitType.Episode);
+        var userId = Guid.NewGuid();
+        var item = Item(userId, source, TrackingStatus.WishListed);
+        _repository
+            .Setup(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+
+        var result = await _service.UpdateAsync(userId, source.Id, new UpdateLibraryItemRequest(TrackingStatus.Completed, null, source.SourceMaterialUnits.ElementAt(1).Id));
+
+        Assert.NotNull(result);
+        _repository.Verify(x => x.Update(item), Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ForBook_WithUnitId_SetsAllUnitsAndSaves()
+    {
+        var source = SourceWithUnitsAndMedium(3, Medium.Book, UnitType.Chapter);
+        var userId = Guid.NewGuid();
+        var item = Item(userId, source, TrackingStatus.WishListed);
+        _repository
+            .Setup(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+
+        var result = await _service.UpdateAsync(userId, source.Id, new UpdateLibraryItemRequest(TrackingStatus.Completed, null, source.SourceMaterialUnits.ElementAt(0).Id));
+
+        Assert.NotNull(result);
+        _repository.Verify(x => x.Update(item), Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ForUnitBasedMaterial_WithInvalidUnitId_Throws()
+    {
+        var source = SourceWithUnits(2);
+        var userId = Guid.NewGuid();
+        var item = Item(userId, source, TrackingStatus.InProgress);
+        _repository
+            .Setup(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+
+        var invalidUnitId = Guid.NewGuid();
+        var exception = await Assert.ThrowsAsync<ArgumentException>(
+            () => _service.UpdateAsync(userId, source.Id, new UpdateLibraryItemRequest(TrackingStatus.Completed, null, invalidUnitId)));
+
+        Assert.Equal("UnitId", exception.ParamName);
+        _repository.Verify(x => x.Update(It.IsAny<UserSourceMaterial>()), Times.Never);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

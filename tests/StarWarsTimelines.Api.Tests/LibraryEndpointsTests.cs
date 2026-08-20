@@ -362,6 +362,51 @@ public sealed class LibraryEndpointsTests : ApiTestBase
     }
 
     [Fact]
+    public async Task AddLibraryItem_WithStatus_UsesProvidedStatus()
+    {
+        var client = await CreateStandardClientAsync();
+        var revengeOfTheSithId = new Guid("00000000-0000-0000-0000-000000000003");
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/users/{PadmeId}/source-materials",
+            new AddLibraryItemRequest(revengeOfTheSithId, TrackingStatus.InProgress));
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var item = await response.Content.ReadFromJsonAsync<LibraryItemResponse>();
+
+        Assert.NotNull(item);
+        Assert.Equal(revengeOfTheSithId, item.SourceMaterialId);
+        Assert.Equal(TrackingStatus.InProgress, item.Status);
+    }
+
+    [Fact]
+    public async Task UpdateLibraryItem_ForShow_WithUnitId_UpdatesUnitAndReturnsSuccess()
+    {
+        var client = await CreateStandardClientAsync();
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/users/{PadmeId}/source-materials/{CloneWarsId}",
+            new UpdateLibraryItemRequest(TrackingStatus.Completed, null, CloneWarsUnitFiveId));
+
+        response.EnsureSuccessStatusCode();
+        var item = await response.Content.ReadFromJsonAsync<LibraryItemResponse>();
+
+        Assert.NotNull(item);
+    }
+
+    [Fact]
+    public async Task UpdateLibraryItem_ForUnitBasedMaterial_WithInvalidUnitId_ReturnsBadRequest()
+    {
+        var client = await CreateStandardClientAsync();
+
+        var response = await client.PutAsJsonAsync(
+            $"/api/users/{PadmeId}/source-materials/{CloneWarsId}",
+            new UpdateLibraryItemRequest(TrackingStatus.Completed, null, Guid.NewGuid()));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
     public async Task UpdateLibraryItem_AsOwner_ForUnitBasedMaterial_FavoriteOnly_Succeeds()
     {
         var client = await CreateStandardClientAsync();

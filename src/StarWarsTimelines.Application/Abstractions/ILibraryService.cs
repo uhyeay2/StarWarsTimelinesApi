@@ -1,4 +1,5 @@
 using StarWarsTimelines.Application.Dtos;
+using StarWarsTimelines.Domain.Enums;
 
 namespace StarWarsTimelines.Application.Abstractions;
 
@@ -16,19 +17,21 @@ public interface ILibraryService
     Task<IReadOnlyList<LibraryItemResponse>> GetLibraryAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Adds a source material to a user's library with a default status of <c>WishListed</c>.
+    /// Adds a source material to a user's library with an optional initial status (defaults to <see cref="TrackingStatus.WishListed"/>).
     /// </summary>
     /// <param name="userId">The identifier of the user who owns the library.</param>
     /// <param name="sourceMaterialId">The identifier of the source material to track.</param>
+    /// <param name="initialStatus">The initial tracking status, or <c>null</c> to default to <see cref="TrackingStatus.WishListed"/>.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>
     /// The resulting library item, or <c>null</c> when the source material does not exist. When the item is already
     /// tracked, the existing item is returned unchanged.
     /// </returns>
-    Task<LibraryItemResponse?> AddAsync(Guid userId, Guid sourceMaterialId, CancellationToken cancellationToken = default);
+    Task<LibraryItemResponse?> AddAsync(Guid userId, Guid sourceMaterialId, TrackingStatus? initialStatus = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Partially updates a library item's favorite flag and, for materials without sub-units, its status.
+    /// Partially updates a library item's favorite flag and, for materials without sub-units, its status. For
+    /// unit-based materials, the status is set by providing a <see cref="UpdateLibraryItemRequest.UnitId"/>.
     /// </summary>
     /// <param name="userId">The identifier of the user who owns the item.</param>
     /// <param name="sourceMaterialId">The identifier of the tracked source material.</param>
@@ -36,8 +39,8 @@ public interface ILibraryService
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated library item, or <c>null</c> if it does not exist.</returns>
     /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="request"/> sets a status on a source material that has sub-units, because its
-    /// status is derived from unit progress.
+    /// Thrown when <paramref name="request"/> sets a status on a source material that has sub-units without
+    /// specifying a <see cref="UpdateLibraryItemRequest.UnitId"/>.
     /// </exception>
     Task<LibraryItemResponse?> UpdateAsync(
         Guid userId,
