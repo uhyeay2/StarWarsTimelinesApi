@@ -17,6 +17,9 @@ public enum UnitType
     /// <summary>A full season of a television series, containing multiple episodes.</summary>
     Season,
 
+    /// <summary>A collection of issues in a comic series (e.g., Trade Paperback Volume).</summary>
+    Volume,
+
     /// <summary>A single level or mission of a video game.</summary>
     Level
 }

@@ -267,6 +267,7 @@ public static class SeedData
     private static readonly SeedUnitEntry[] SeedUnitData =
     [
         // The Clone Wars (10), seasons 1-7
+        // Episodes
         new(10, 1, UnitType.Episode, 1, null),
         new(10, 1, UnitType.Episode, 2, null),
         new(10, 1, UnitType.Episode, 3, null),
@@ -292,6 +293,7 @@ public static class SeedData
         new(10, 7, UnitType.Episode, 11, "Shattered"),
         new(10, 7, UnitType.Episode, 12, "Victory and Death"),
         // The Mandalorian (12), season 1
+        // Episodes
         new(12, 1, UnitType.Episode, 1, "Chapter 1: The Mandalorian"),
         new(12, 1, UnitType.Episode, 2, "Chapter 2: The Child"),
         new(12, 1, UnitType.Episode, 3, "Chapter 3: The Sin"),
@@ -301,13 +303,21 @@ public static class SeedData
         new(12, 1, UnitType.Episode, 7, "Chapter 7: The Reckoning"),
         new(12, 1, UnitType.Episode, 8, "Chapter 8: Redemption"),
         // Ahsoka (13), season 1
+        // Episodes
         new(13, 1, UnitType.Episode, 1, "Part One: Master and Apprentice"),
         new(13, 1, UnitType.Episode, 2, "Part Two: Toil and Trouble"),
         new(13, 1, UnitType.Episode, 3, "Part Three: Time to Fly"),
-        // Dawn of the Jedi (14), volume 1
+        new(13, 1, UnitType.Episode, 4, "Part Four: Fallen Jedi"),
+        new(13, 1, UnitType.Episode, 5, "Part Five: Shadow Warrior"),
+        new(13, 1, UnitType.Episode, 6, "Part Six: Far, Far Away"),
+        // Dawn of the Jedi (14)
+        // Issues
         new(14, 1, UnitType.Issue, 1, null),
         new(14, 1, UnitType.Issue, 2, null),
         new(14, 1, UnitType.Issue, 3, null),
+        new(14, 2, UnitType.Issue, 1, null),
+        new(14, 2, UnitType.Issue, 2, null),
+        new(14, 2, UnitType.Issue, 3, null),
         // Shatterpoint (19)
         new(19, null, UnitType.Chapter, 1, null),
         new(19, null, UnitType.Chapter, 2, null),
@@ -317,24 +327,32 @@ public static class SeedData
         new(22, null, UnitType.Level, 2, null),
         new(22, null, UnitType.Level, 3, null),
         // Star Wars: Rebels (11), seasons 1-2
+        // Episodes
         new(11, 1, UnitType.Episode, 1, "Spark of Rebellion"),
         new(11, 1, UnitType.Episode, 2, "Droids in Distress"),
         new(11, 1, UnitType.Episode, 3, "Fighter Flight"),
         new(11, 2, UnitType.Episode, 1, "The Siege of Lothal"),
         new(11, 2, UnitType.Episode, 2, "The Lost Commanders"),
         new(11, 2, UnitType.Episode, 3, "Relics of the Old Republic"),
-        // Ahsoka (13), season 1
-        new(13, 1, UnitType.Episode, 4, "Part Four: Fallen Jedi"),
-        new(13, 1, UnitType.Episode, 5, "Part Five: Shadow Warrior"),
-        new(13, 1, UnitType.Episode, 6, "Part Six: Far, Far Away"),
-        // Dawn of the Jedi (14), volume 2
-        new(14, 2, UnitType.Issue, 1, null),
-        new(14, 2, UnitType.Issue, 2, null),
-        new(14, 2, UnitType.Issue, 3, null),
         // The High Republic: Light of the Jedi (18)
         new(18, null, UnitType.Chapter, 1, null),
         new(18, null, UnitType.Chapter, 2, null),
-        new(18, null, UnitType.Chapter, 3, null)
+        new(18, null, UnitType.Chapter, 3, null),
+        // Season units (for season-level status tracking on shows)
+        new(10, null, UnitType.Season, 1, "Season 1"),
+        new(10, null, UnitType.Season, 2, "Season 2"),
+        new(10, null, UnitType.Season, 3, "Season 3"),
+        new(10, null, UnitType.Season, 4, "Season 4"),
+        new(10, null, UnitType.Season, 5, "Season 5"),
+        new(10, null, UnitType.Season, 6, "Season 6"),
+        new(10, null, UnitType.Season, 7, "Season 7"),
+        new(12, null, UnitType.Season, 1, "Season 1"),
+        new(13, null, UnitType.Season, 1, "Season 1"),
+        new(11, null, UnitType.Season, 1, "Season 1"),
+        new(11, null, UnitType.Season, 2, "Season 2"),
+        // Volume units (for volume-level status tracking on comics)
+        new(14, null, UnitType.Volume, 1, "Volume 1"),
+        new(14, null, UnitType.Volume, 2, "Volume 2")
     ];
 
     /// <summary>

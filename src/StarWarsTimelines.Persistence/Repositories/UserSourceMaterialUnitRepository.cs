@@ -44,4 +44,8 @@ public sealed class UserSourceMaterialUnitRepository : IUserSourceMaterialUnitRe
 
     /// <inheritdoc />
     public void Update(UserSourceMaterialUnit item) => _context.UserSourceMaterialUnits.Update(item);
+
+    /// <inheritdoc />
+    public void RemoveRange(IEnumerable<UserSourceMaterialUnit> items) =>
+        _context.UserSourceMaterialUnits.RemoveRange(items);
 }

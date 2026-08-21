@@ -17,6 +17,15 @@ public interface ILibraryService
     Task<IReadOnlyList<LibraryItemResponse>> GetLibraryAsync(Guid userId, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Gets a single library item for a user, including its per-unit progress.
+    /// </summary>
+    /// <param name="userId">The identifier of the user who owns the item.</param>
+    /// <param name="sourceMaterialId">The identifier of the tracked source material.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns>The library item, or <c>null</c> when the source material is not tracked by the user.</returns>
+    Task<LibraryItemResponse?> GetByIdAsync(Guid userId, Guid sourceMaterialId, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Adds a source material to a user's library with an optional initial status (defaults to <see cref="TrackingStatus.WishListed"/>).
     /// </summary>
     /// <param name="userId">The identifier of the user who owns the library.</param>
@@ -93,5 +102,22 @@ public interface ILibraryService
         Guid sourceMaterialId,
         Guid unitId,
         bool isCompleted,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Clears the requesting user's progress on a single unit of a tracked source material, removing the
+    /// progress record together with those of any child units (e.g. a season's episodes). When no progress
+    /// rows remain for the source material afterwards, the library item itself is removed.
+    /// </summary>
+    /// <param name="userId">The identifier of the user who owns the library.</param>
+    /// <param name="sourceMaterialId">The identifier of the tracked source material.</param>
+    /// <param name="unitId">The identifier of the unit whose progress is cleared.</param>
+    /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
+    /// <returns><c>true</c> when the request was applied (the library entry may have been removed with it); <c>false</c> when the item does not exist.</returns>
+    /// <exception cref="ArgumentException">Thrown when the unit does not belong to the source material.</exception>
+    Task<bool> ClearUnitProgressAsync(
+        Guid userId,
+        Guid sourceMaterialId,
+        Guid unitId,
         CancellationToken cancellationToken = default);
 }

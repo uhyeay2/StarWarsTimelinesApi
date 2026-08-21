@@ -36,4 +36,10 @@ public interface IUserSourceMaterialUnitRepository
     /// </summary>
     /// <param name="item">The progress record to update.</param>
     void Update(UserSourceMaterialUnit item);
+
+    /// <summary>
+    /// Stages the given progress records for deletion.
+    /// </summary>
+    /// <param name="items">The progress records to remove.</param>
+    void RemoveRange(IEnumerable<UserSourceMaterialUnit> items);
 }

@@ -40,6 +40,27 @@ public static class LibraryEndpoints
             (StatusCodes.Status200OK, "Example library", "The demo user's tracked source materials with per-unit progress.", ExampleLibrary),
             (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can view a library.", ExampleValues.Forbidden("The caller does not own this library.")));
 
+        // Gets a single library item with its per-unit progress; the caller must be the user themselves or an administrator.
+        group.MapGet("/{sourceMaterialId:guid}", async (Guid userId, Guid sourceMaterialId, ILibraryService service, ClaimsPrincipal principal, CancellationToken ct) =>
+        {
+            if (!CanAccessLibrary(principal, userId))
+            {
+                return Results.Forbid();
+            }
+            var item = await service.GetByIdAsync(userId, sourceMaterialId, ct);
+            return item is null ? Results.NotFound() : Results.Ok(item);
+        })
+        .WithName("GetLibraryItem")
+        .RequireAuthorization()
+        .Produces<LibraryItemResponse>(StatusCodes.Status200OK, "application/json")
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces(StatusCodes.Status404NotFound)
+        .WithResponseExamples(
+            (StatusCodes.Status200OK, "Tracked material", "The library item with its units and per-unit progress.", ExampleLibrary[0]),
+            (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can view a library.", ExampleValues.Forbidden("The caller does not own this library.")),
+            (StatusCodes.Status404NotFound, "Item not found", "The source material is not tracked in this library.", ExampleValues.NotFound("The source material is not tracked in this library.")));
+
         // Adds a source material to a user's library; the caller must be the user themselves or an administrator.
         group.MapPost("/", async (Guid userId, AddLibraryItemRequest request, ILibraryService service, ClaimsPrincipal principal, CancellationToken ct) =>
         {
@@ -165,10 +186,32 @@ public static class LibraryEndpoints
             ("Mark complete", "Sets the unit as completed.", new UpdateUnitProgressRequest(true)),
             ("Mark incomplete", "Resets the unit progress.", new UpdateUnitProgressRequest(false)))
         .WithResponseExamples(
-            (StatusCodes.Status200OK, "Progress updated", "The unit with the updated progress flag.", new LibraryUnitResponse(new Guid("00000000-0000-0000-0000-500000000004"), UnitType.Episode, 1, 4, null, true)),
+            (StatusCodes.Status200OK, "Progress updated", "The unit with the updated progress flag.", new LibraryUnitResponse(new Guid("00000000-0000-0000-0000-500000000004"), UnitType.Episode, 1, 4, null, true, true)),
             (StatusCodes.Status400BadRequest, "Malformed body", "The request body is missing or malformed.", ExampleValues.BadRequest("The request body must contain an isCompleted flag.")),
             (StatusCodes.Status404NotFound, "Not found", "The source material is not tracked, or the unit does not belong to it.", ExampleValues.NotFound("The unit is not part of a tracked source material.")),
             (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can modify a library.", ExampleValues.Forbidden("The caller does not own this library.")));
+
+        // Clears the user's progress on a unit of a tracked source material (including child units such as a season's episodes); when no progress remains for the material, the library entry is removed. The caller must be the user themselves or an administrator.
+        group.MapDelete("/{sourceMaterialId:guid}/units/{unitId:guid}", async (Guid userId, Guid sourceMaterialId, Guid unitId, ILibraryService service, ClaimsPrincipal principal, CancellationToken ct) =>
+        {
+            if (!CanAccessLibrary(principal, userId))
+            {
+                return Results.Forbid();
+            }
+            var cleared = await service.ClearUnitProgressAsync(userId, sourceMaterialId, unitId, ct);
+            return cleared ? Results.NoContent() : Results.NotFound();
+        })
+        .WithName("ClearUnitProgress")
+        .RequireAuthorization()
+        .Produces(StatusCodes.Status204NoContent)
+        .Produces(StatusCodes.Status401Unauthorized)
+        .Produces(StatusCodes.Status403Forbidden)
+        .Produces<ProblemDetails>(StatusCodes.Status400BadRequest, "application/json")
+        .Produces(StatusCodes.Status404NotFound)
+        .WithResponseExamples(
+            (StatusCodes.Status400BadRequest, "Unknown unit", "The UnitId does not belong to the source material.", ExampleValues.BadRequest("The specified unit does not belong to this source material.")),
+            (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can modify a library.", ExampleValues.Forbidden("The caller does not own this library.")),
+            (StatusCodes.Status404NotFound, "Item not found", "The source material is not tracked in this library.", ExampleValues.NotFound("The source material is not tracked in this library.")));
 
         // Removes a source material from a user's library; the caller must be the user themselves or an administrator.
         group.MapDelete("/{sourceMaterialId:guid}", async (Guid userId, Guid sourceMaterialId, ILibraryService service, ClaimsPrincipal principal, CancellationToken ct) =>

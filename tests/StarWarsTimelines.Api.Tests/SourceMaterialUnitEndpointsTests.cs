@@ -27,11 +27,11 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
         var items = await response.Content.ReadFromJsonAsync<List<SourceMaterialUnitResponse>>();
 
         Assert.NotNull(items);
-        Assert.Equal(8, items.Count);
-        Assert.Equal(Enumerable.Range(1, 8), items.Select(x => x.Number));
-        Assert.All(items, x => Assert.Equal(MandalorianId, x.SourceMaterialId));
-        var first = items[0];
-        Assert.Equal(UnitType.Episode, first.UnitType);
+        var episodes = items.Where(u => u.UnitType == UnitType.Episode).ToList();
+        Assert.Equal(8, episodes.Count);
+        Assert.Equal(Enumerable.Range(1, 8), episodes.Select(x => x.Number));
+        Assert.All(episodes, x => Assert.Equal(MandalorianId, x.SourceMaterialId));
+        var first = episodes[0];
         Assert.Equal("Chapter 1: The Mandalorian", first.Title);
     }
 

@@ -76,6 +76,50 @@ public sealed class LibraryEndpointsTests : ApiTestBase
     }
 
     [Fact]
+    public async Task GetLibraryItem_AsAnonymous_ReturnsUnauthorized()
+    {
+        var response = await Client.GetAsync($"/api/users/{PadmeId}/source-materials/{CloneWarsId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLibraryItem_AsOwner_ReturnsSingleItemWithUnits()
+    {
+        var client = await CreateStandardClientAsync();
+
+        var response = await client.GetAsync($"/api/users/{PadmeId}/source-materials/{CloneWarsId}");
+
+        response.EnsureSuccessStatusCode();
+        var item = await response.Content.ReadFromJsonAsync<LibraryItemResponse>();
+
+        Assert.NotNull(item);
+        Assert.Equal(CloneWarsId, item!.SourceMaterialId);
+        Assert.Contains(item.Units, u => u.Id == CloneWarsUnitOneId && u.IsCompleted);
+        Assert.Contains(item.Units, u => u.Id == CloneWarsUnitFiveId && !u.IsCompleted && !u.IsTracked);
+    }
+
+    [Fact]
+    public async Task GetLibraryItem_WhenNotTracked_ReturnsNotFound()
+    {
+        var client = await CreateStandardClientAsync();
+
+        var response = await client.GetAsync($"/api/users/{PadmeId}/source-materials/{Guid.NewGuid()}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetLibraryItem_AsAnotherStandardUser_ReturnsForbidden()
+    {
+        var luke = await CreateClientAsAsync("luke", "luke123");
+
+        var response = await luke.GetAsync($"/api/users/{PadmeId}/source-materials/{CloneWarsId}");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
     public async Task AddLibraryItem_AsOwner_DefaultsToWishListed()
     {
         var client = await CreateStandardClientAsync();
@@ -203,14 +247,18 @@ public sealed class LibraryEndpointsTests : ApiTestBase
         var items = await response.Content.ReadFromJsonAsync<List<LibraryItemResponse>>();
 
         var cloneWars = Assert.Single(items!, x => x.SourceMaterialId == CloneWarsId);
-        Assert.Equal(24, cloneWars.Units.Count);
-        Assert.Equal(Enumerable.Range(1, 5), cloneWars.Units.Take(5).Select(x => x.Number));
-        Assert.All(cloneWars.Units.Take(5), x => Assert.Equal(1, x.GroupNumber));
-        Assert.True(cloneWars.Units[0].IsCompleted);
-        Assert.True(cloneWars.Units[1].IsCompleted);
-        Assert.True(cloneWars.Units[2].IsCompleted);
-        Assert.False(cloneWars.Units[3].IsCompleted);
-        Assert.False(cloneWars.Units[4].IsCompleted);
+        Assert.Equal(31, cloneWars.Units.Count); // 7 Season units + 24 Episodes
+        // Season units come first (null GroupNumber sorts first), then episodes
+        var episodesInSeason1 = cloneWars.Units.Where(u => u.GroupNumber == 1 && u.UnitType == UnitType.Episode).ToList();
+        Assert.Equal(Enumerable.Range(1, 5), episodesInSeason1.Take(5).Select(x => x.Number));
+        Assert.True(episodesInSeason1[0].IsCompleted);
+        Assert.True(episodesInSeason1[1].IsCompleted);
+        Assert.True(episodesInSeason1[2].IsCompleted);
+        Assert.False(episodesInSeason1[3].IsCompleted);
+        Assert.False(episodesInSeason1[4].IsCompleted);
+        // Verify Season units are present
+        var seasonUnits = cloneWars.Units.Where(u => u.UnitType == UnitType.Season).ToList();
+        Assert.Equal(7, seasonUnits.Count);
     }
 
     [Fact]
