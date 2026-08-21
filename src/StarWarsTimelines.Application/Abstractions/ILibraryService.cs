@@ -39,8 +39,9 @@ public interface ILibraryService
     Task<LibraryItemResponse?> AddAsync(Guid userId, Guid sourceMaterialId, TrackingStatus? initialStatus = null, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Partially updates a library item's favorite flag and, for materials without sub-units, its status. For
-    /// unit-based materials, the status is set by providing a <see cref="UpdateLibraryItemRequest.UnitId"/>.
+    /// Partially updates a library item's favorite flag and, for materials without season/volume sub-units, its
+    /// status. For season/volume-based materials (shows and comics), the status is set by providing a
+    /// <see cref="UpdateLibraryItemRequest.UnitId"/> targeting a Season/Volume unit.
     /// </summary>
     /// <param name="userId">The identifier of the user who owns the item.</param>
     /// <param name="sourceMaterialId">The identifier of the tracked source material.</param>
@@ -48,8 +49,8 @@ public interface ILibraryService
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated library item, or <c>null</c> if it does not exist.</returns>
     /// <exception cref="ArgumentException">
-    /// Thrown when <paramref name="request"/> sets a status on a source material that has sub-units without
-    /// specifying a <see cref="UpdateLibraryItemRequest.UnitId"/>.
+    /// Thrown when <paramref name="request"/> sets a status on a source material that has season/volume sub-units
+    /// without specifying a <see cref="UpdateLibraryItemRequest.UnitId"/>.
     /// </exception>
     Task<LibraryItemResponse?> UpdateAsync(
         Guid userId,

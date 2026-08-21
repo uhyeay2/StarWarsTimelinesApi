@@ -111,12 +111,17 @@ public sealed class LibraryService : ILibraryService
             return null;
         }
 
-        if (request.Status is not null && item.SourceMaterial.SourceMaterialUnits.Count > 0)
+        var hasGroupUnits = item.SourceMaterial.SourceMaterialUnits.Any(
+            u => u.UnitType is UnitType.Season or UnitType.Volume);
+
+        // Season/volume-based materials (shows, comics) always track through unit progress; other
+        // materials (books with chapters, games with levels) also accept a material-level status.
+        if (request.Status is not null && (hasGroupUnits || request.UnitId is not null))
         {
             if (request.UnitId is null)
             {
                 throw new ArgumentException(
-                    "UnitId is required when setting status on a source material that has sub-units.",
+                    "UnitId is required when setting status on a source material that has season/volume sub-units.",
                     nameof(request.UnitId));
             }
 
@@ -414,11 +419,12 @@ public sealed class LibraryService : ILibraryService
 
     /// <summary>
     /// Derives the effective tracking status of a library item from its unit progress.
-    /// For shows/comics with Season/Volume units, status is derived from those level progress (or from their
-    /// child episodes/issues if no explicit season/volume progress exists).
-    /// Otherwise, status is derived from all episode/issue/chapter/unit progress.
+    /// For shows/comics with Season/Volume units, status is derived from those group units' progress
+    /// (or from their child episodes/issues if no explicit season/volume progress exists).
+    /// For all other materials (movies, books with chapters, games with levels), the manually tracked
+    /// status stored on the library item is reported as-is: chapter/level sub-units are informational.
     /// </summary>
-    /// <param name="item">The library entity whose stored status is used as a fallback for materials without units.</param>
+    /// <param name="item">The library entity whose stored status is used for non-grouped materials.</param>
     /// <param name="units">The material's sub-units.</param>
     /// <param name="progress">The user's unit progress keyed by unit identifier.</param>
     /// <returns>The derived <see cref="TrackingStatus"/>.</returns>
@@ -427,11 +433,6 @@ public sealed class LibraryService : ILibraryService
         IReadOnlyCollection<SourceMaterialUnit> units,
         IReadOnlyDictionary<Guid, bool> progress)
     {
-        if (units.Count == 0)
-        {
-            return item.Status;
-        }
-
         var seasonUnits = units.Where(u => u.UnitType == UnitType.Season).ToList();
         var volumeUnits = units.Where(u => u.UnitType == UnitType.Volume).ToList();
 
@@ -447,11 +448,8 @@ public sealed class LibraryService : ILibraryService
             return DeriveStatusFromGroupUnits(volumeUnits, units, progress);
         }
 
-        // Fall back to episode/issue/chapter/level derivation
-        var completed = units.Count(u => progress.GetValueOrDefault(u.Id));
-        if (completed == 0) return TrackingStatus.WishListed;
-        if (completed == units.Count) return TrackingStatus.Completed;
-        return TrackingStatus.InProgress;
+        // Books (chapters), games (levels), and unit-less materials track at the material level.
+        return item.Status;
     }
 
     /// <summary>

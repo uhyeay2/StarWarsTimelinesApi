@@ -483,7 +483,7 @@ public sealed class LibraryServiceTests
     [Fact]
     public async Task GetLibraryAsync_WithNoUnitsCompleted_DerivesWishListed()
     {
-        var source = SourceWithUnits(3);
+        var source = ShowWithSeasons(1, 1);
         var userId = Guid.NewGuid();
         var item = Item(userId, source, TrackingStatus.InProgress);
         _repository
@@ -499,18 +499,18 @@ public sealed class LibraryServiceTests
     [Fact]
     public async Task GetLibraryAsync_WithSomeUnitsCompleted_DerivesInProgress()
     {
-        var source = SourceWithUnits(3);
+        var source = ShowWithSeasons(1, 1);
         var userId = Guid.NewGuid();
         var item = Item(userId, source, TrackingStatus.WishListed);
         _repository
             .Setup(x => x.GetLibraryAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UserSourceMaterial> { item });
-        var units = source.SourceMaterialUnits.ToList();
+        var firstEpisode = source.SourceMaterialUnits.First(u => u.UnitType == UnitType.Episode);
         _progress
             .Setup(x => x.GetByUserAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<UserSourceMaterialUnit>
             {
-                new() { UserId = userId, SourceMaterialUnitId = units[0].Id, IsCompleted = true }
+                new() { UserId = userId, SourceMaterialUnitId = firstEpisode.Id, IsCompleted = true }
             });
 
         var result = await _service.GetLibraryAsync(userId);
@@ -522,7 +522,7 @@ public sealed class LibraryServiceTests
     [Fact]
     public async Task GetLibraryAsync_WithAllUnitsCompleted_DerivesCompleted()
     {
-        var source = SourceWithUnits(3);
+        var source = ShowWithSeasons(1, 1);
         var userId = Guid.NewGuid();
         var item = Item(userId, source, TrackingStatus.InProgress);
         _repository
@@ -562,9 +562,35 @@ public sealed class LibraryServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ForUnitBasedMaterial_WhenStatusProvided_WithoutUnitId_ThrowsAndNeverSaves()
+    public async Task GetLibraryAsync_ForBookWithChapters_KeepsManualStatusEvenWhenChaptersCompleted()
     {
-        var source = SourceWithUnits(1);
+        var source = SourceWithUnitsAndMedium(3, Medium.Book, UnitType.Chapter);
+        var userId = Guid.NewGuid();
+        var item = Item(userId, source, TrackingStatus.InProgress);
+        _repository
+            .Setup(x => x.GetLibraryAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<UserSourceMaterial> { item });
+        _progress
+            .Setup(x => x.GetByUserAsync(userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(source.SourceMaterialUnits
+                .Select(u => new UserSourceMaterialUnit
+                {
+                    UserId = userId,
+                    SourceMaterialUnitId = u.Id,
+                    IsCompleted = true
+                })
+                .ToList());
+
+        var result = await _service.GetLibraryAsync(userId);
+
+        var single = Assert.Single(result);
+        Assert.Equal(TrackingStatus.InProgress, single.Status);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ForSeasonBasedMaterial_WhenStatusProvided_WithoutUnitId_ThrowsAndNeverSaves()
+    {
+        var source = ShowWithSeasons(2);
         var userId = Guid.NewGuid();
         var item = Item(userId, source, TrackingStatus.InProgress);
         _repository
@@ -577,6 +603,25 @@ public sealed class LibraryServiceTests
         Assert.Equal("UnitId", exception.ParamName);
         _repository.Verify(x => x.Update(It.IsAny<UserSourceMaterial>()), Times.Never);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ForBookWithoutUnitId_SetsMaterialLevelStatus()
+    {
+        var source = SourceWithUnitsAndMedium(3, Medium.Book, UnitType.Chapter);
+        var userId = Guid.NewGuid();
+        var item = Item(userId, source, TrackingStatus.WishListed);
+        _repository
+            .Setup(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+
+        var result = await _service.UpdateAsync(userId, source.Id, new UpdateLibraryItemRequest(TrackingStatus.InProgress, null));
+
+        Assert.NotNull(result);
+        Assert.Equal(TrackingStatus.InProgress, result!.Status);
+        Assert.Equal(TrackingStatus.InProgress, item.Status);
+        _repository.Verify(x => x.Update(item), Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

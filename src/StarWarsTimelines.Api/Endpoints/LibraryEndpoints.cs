@@ -146,7 +146,7 @@ public static class LibraryEndpoints
         .Produces(StatusCodes.Status404NotFound)
         .WithRequestExamples(
             ("Mark favorite", "Leaves the status unchanged and toggles the favorite flag.", new UpdateLibraryItemRequest(null, true)),
-            ("Status without UnitId", "Rejected when the source material has sub-units and no UnitId is provided.", new UpdateLibraryItemRequest(TrackingStatus.Completed, null)))
+            ("Status without UnitId", "Rejected when the source material has season/volume sub-units and no UnitId is provided.", new UpdateLibraryItemRequest(TrackingStatus.Completed, null)))
         .WithResponseExamples(
             (StatusCodes.Status200OK, "Item updated", "The library item after the update.", new LibraryItemResponse(
                 new Guid("00000000-0000-0000-0000-000000000010"),
@@ -161,7 +161,7 @@ public static class LibraryEndpoints
                     new(new Guid("00000000-0000-0000-0000-500000000002"), UnitType.Episode, 1, 2, null, true),
                     new(new Guid("00000000-0000-0000-0000-500000000003"), UnitType.Episode, 1, 3, null, true)
                 })),
-            (StatusCodes.Status400BadRequest, "Missing UnitId", "The UnitId is required when setting status on a unit-based material.", ExampleValues.BadRequest("UnitId is required when setting status on a source material that has sub-units.")),
+            (StatusCodes.Status400BadRequest, "Missing UnitId", "The UnitId is required when setting status on a season/volume-based material.", ExampleValues.BadRequest("UnitId is required when setting status on a source material that has season/volume sub-units.")),
             (StatusCodes.Status403Forbidden, "Not your library", "Only the owner or an administrator can modify a library.", ExampleValues.Forbidden("The caller does not own this library.")),
             (StatusCodes.Status404NotFound, "Item not found", "The source material is not tracked in this library.", ExampleValues.NotFound("The source material is not tracked in this library.")));
 

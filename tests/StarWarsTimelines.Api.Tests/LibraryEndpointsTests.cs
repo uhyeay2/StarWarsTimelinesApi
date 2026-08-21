@@ -17,6 +17,7 @@ public sealed class LibraryEndpointsTests : ApiTestBase
     private static readonly Guid FallenOrderId = new("00000000-0000-0000-0000-000000000022");
     private static readonly Guid CloneWarsId = new("00000000-0000-0000-0000-000000000010");
     private static readonly Guid MandalorianId = new("00000000-0000-0000-0000-000000000012");
+    private static readonly Guid LightOfTheJediId = new("00000000-0000-0000-0000-000000000018");
     private static readonly Guid CloneWarsUnitOneId = new("00000000-0000-0000-0000-500000000001");
     private static readonly Guid CloneWarsUnitFiveId = new("00000000-0000-0000-0000-500000000005");
     private static readonly Guid MandalorianUnitOneId = new("00000000-0000-0000-0000-500000000025");
@@ -407,6 +408,26 @@ public sealed class LibraryEndpointsTests : ApiTestBase
             new UpdateLibraryItemRequest(TrackingStatus.Completed, null));
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UpdateLibraryItem_AsOwner_ForBookWithoutUnitId_SetsStatusAndItSticks()
+    {
+        var client = await CreateStandardClientAsync();
+        var add = await client.PostAsJsonAsync(
+            $"/api/users/{PadmeId}/source-materials",
+            new AddLibraryItemRequest(LightOfTheJediId));
+        add.EnsureSuccessStatusCode();
+
+        var update = await client.PutAsJsonAsync(
+            $"/api/users/{PadmeId}/source-materials/{LightOfTheJediId}",
+            new UpdateLibraryItemRequest(TrackingStatus.InProgress, null));
+        update.EnsureSuccessStatusCode();
+
+        var library = await (await client.GetAsync($"/api/users/{PadmeId}/source-materials")).Content.ReadFromJsonAsync<List<LibraryItemResponse>>();
+
+        var book = Assert.Single(library!, x => x.SourceMaterialId == LightOfTheJediId);
+        Assert.Equal(TrackingStatus.InProgress, book.Status);
     }
 
     [Fact]
