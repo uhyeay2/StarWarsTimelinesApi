@@ -194,18 +194,35 @@ public sealed class CharacterServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ChangesName()
+    public async Task UpdateAsync_ReplacesData()
     {
-        var item = new Character { Id = Guid.NewGuid(), Name = "Old name" };
+        var oldPlanetId = Guid.NewGuid();
+        var item = new Character
+        {
+            Id = Guid.NewGuid(),
+            Name = "Old name",
+            PlanetBornOnId = oldPlanetId,
+            YearOfBirthEarliest = -900,
+            YearOfBirthLatest = -890,
+            SpeciesId = Guid.NewGuid()
+        };
+        var planetId = Guid.NewGuid();
         _repository
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
+        _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync(new Location());
 
-        var result = await _service.UpdateAsync(item.Id, new UpdateCharacterRequest("New name"));
+        // Nulls clear the stored attributes; only the name and birth planet survive.
+        var result = await _service.UpdateAsync(item.Id, new UpdateCharacterRequest("New name", planetId, null, null, null, null, null));
 
         Assert.NotNull(result);
         Assert.Equal("New name", result.Name);
-        _repository.Verify(x => x.Update(It.Is<Character>(i => i.Name == "New name")), Times.Once);
+        Assert.Equal(planetId, result.PlanetBornOnId);
+        Assert.Null(result.YearOfBirthEarliest);
+        Assert.Null(result.SpeciesId);
+        _repository.Verify(
+            x => x.Update(It.Is<Character>(i => i.Name == "New name" && i.PlanetBornOnId == planetId && i.YearOfBirthEarliest == null && i.SpeciesId == null)),
+            Times.Once);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
@@ -218,7 +235,7 @@ public sealed class CharacterServiceTests
             .ReturnsAsync(item);
 
         // Yoda's age is only known approximately: between 890 and 900 BBY. Note that -900 precedes -890.
-        var result = await _service.UpdateAsync(item.Id, new UpdateCharacterRequest(YearOfBirthEarliest: -900, YearOfBirthLatest: -890));
+        var result = await _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Yoda", null, -900, -890, null, null, null));
 
         Assert.NotNull(result);
         Assert.Equal(-900, result.YearOfBirthEarliest);
@@ -229,13 +246,13 @@ public sealed class CharacterServiceTests
     [Fact]
     public async Task UpdateAsync_WithHalfAYearRange_Throws()
     {
-        var item = new Character { Id = Guid.NewGuid(), Name = "Keep me" };
+        var item = new Character { Id = Guid.NewGuid(), Name = "Keep me", YearOfBirthEarliest = -36, YearOfBirthLatest = -36 };
         _repository
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
-            () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest(YearOfBirthEarliest: -36)));
+            () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Keep me", null, -36, null, null, null, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
     }
@@ -249,7 +266,7 @@ public sealed class CharacterServiceTests
             .ReturnsAsync(item);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
-            () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest(YearOfDeathEarliest: 35, YearOfDeathLatest: 4)));
+            () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Keep me", null, null, null, 35, 4, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
     }
@@ -265,7 +282,7 @@ public sealed class CharacterServiceTests
         _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
 
         await Assert.ThrowsAnyAsync<ArgumentException>(
-            () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest(PlanetBornOnId: planetId)));
+            () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Keep me", planetId, null, null, null, null, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
     }
@@ -282,7 +299,7 @@ public sealed class CharacterServiceTests
         _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync(new Location());
         _species.Setup(x => x.GetByIdAsync(speciesId, It.IsAny<CancellationToken>())).ReturnsAsync(new Species());
 
-        var result = await _service.UpdateAsync(item.Id, new UpdateCharacterRequest(PlanetBornOnId: planetId, SpeciesId: speciesId));
+        var result = await _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Revan", planetId, null, null, null, null, speciesId));
 
         Assert.NotNull(result);
         Assert.Equal(planetId, result.PlanetBornOnId);
@@ -297,7 +314,7 @@ public sealed class CharacterServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("   ")));
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("   ", null, null, null, null, null, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
     }
@@ -309,7 +326,7 @@ public sealed class CharacterServiceTests
             .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Character?)null);
 
-        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateCharacterRequest(null));
+        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateCharacterRequest("New name", null, null, null, null, null, null));
 
         Assert.Null(result);
     }

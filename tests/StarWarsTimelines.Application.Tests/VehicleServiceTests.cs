@@ -120,7 +120,7 @@ public sealed class VehicleServiceTests
             .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Vehicle?)null);
 
-        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateVehicleRequest(null));
+        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateVehicleRequest("New name"));
 
         Assert.Null(result);
     }

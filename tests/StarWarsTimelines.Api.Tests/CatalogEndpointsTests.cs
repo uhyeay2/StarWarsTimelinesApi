@@ -52,7 +52,7 @@ public sealed class CatalogEndpointsTests : ApiTestBase, IClassFixture<StarWarsT
             var created = (await createResponse.Content.ReadFromJsonAsync<CharacterResponse>())!;
             channel.Reader.TryRead(out _); // drain create event
 
-            var response = await client.PutAsJsonAsync($"/api/characters/{created.Id}", new UpdateCharacterRequest("Luke"));
+            var response = await client.PutAsJsonAsync($"/api/characters/{created.Id}", new UpdateCharacterRequest("Luke", null, null, null, null, null, null));
             response.EnsureSuccessStatusCode();
 
             Assert.True(channel.Reader.TryRead(out var evt));

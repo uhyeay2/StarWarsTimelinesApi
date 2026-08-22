@@ -86,8 +86,9 @@ public static class SpeciesEndpoints
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithRequestExamples(
-            ("Rename", "Updates the species' name.", new UpdateSpeciesRequest("Iridonian Zabrak")),
-            ("Blank name", "Rejected when the name is set to null or white space.", new UpdateSpeciesRequest("")))
+            ("Set home planet", "Replaces the species' data; the name is required on each call.", new UpdateSpeciesRequest("Iridonian Zabrak", new Guid("00000000-0000-0000-0000-200000000041"))),
+            ("Clear home planet", "A null clears the home planet back to unknown.", new UpdateSpeciesRequest("Iridonian Zabrak", null)),
+            ("Blank name", "Rejected when the name is missing or white space.", new UpdateSpeciesRequest("", null)))
         .WithResponseExamples(
             (StatusCodes.Status200OK, "Species updated", "The species after the update.", new SpeciesResponse(new Guid("00000000-0000-0000-0000-600000000004"), "Iridonian Zabrak", new Guid("00000000-0000-0000-0000-200000000041"), "Iridonia")),
             (StatusCodes.Status400BadRequest, "Blank name", "The name is required.", ExampleValues.BadRequest("Name must not be blank.")),

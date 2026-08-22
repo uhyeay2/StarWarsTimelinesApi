@@ -87,10 +87,10 @@ public static class CharacterEndpoints
         .Produces(StatusCodes.Status403Forbidden)
         .Produces(StatusCodes.Status404NotFound)
         .WithRequestExamples(
-            ("Rename", "Updates the character's name.", new UpdateCharacterRequest("Snips")),
-            ("Confirm exact birth year", "Replaces an estimated range with a single year; earliest and latest are always sent together.", new UpdateCharacterRequest(YearOfBirthEarliest: -36, YearOfBirthLatest: -36)),
-            ("Incomplete year range", "Rejected because one side of the range is missing.", new UpdateCharacterRequest(YearOfBirthEarliest: -36)),
-            ("Blank name", "Rejected when the name is set to null or white space.", new UpdateCharacterRequest("")))
+            ("Replace all details", "Replaces every attribute of the character; the name is required on each call.", new UpdateCharacterRequest("Snips", new Guid("00000000-0000-0000-0000-200000000005"), -36, -36, null, null, new Guid("00000000-0000-0000-0000-600000000003"))),
+            ("Clear optional attributes", "Null values clear biography fields back to unknown.", new UpdateCharacterRequest("Snips", null, null, null, null, null, null)),
+            ("Incomplete year range", "Rejected because one side of the range is missing.", new UpdateCharacterRequest("Snips", null, -36, null, null, null, null)),
+            ("Blank name", "Rejected when the name is missing or white space.", new UpdateCharacterRequest("", null, null, null, null, null, null)))
         .WithResponseExamples(
             (StatusCodes.Status200OK, "Character updated", "The character after the update.", new CharacterResponse(new Guid("00000000-0000-0000-0000-100000000015"), "Snips", null, null, -36, -36, null, null, new Guid("00000000-0000-0000-0000-600000000003"), "Togruta")),
             (StatusCodes.Status400BadRequest, "Blank name", "The name is required.", ExampleValues.BadRequest("Name must not be blank.")),

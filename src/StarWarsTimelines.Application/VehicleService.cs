@@ -63,11 +63,8 @@ public sealed class VehicleService : IVehicleService
             return null;
         }
 
-        if (request.Name is not null)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
-            item.Name = request.Name.Trim();
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        item.Name = request.Name.Trim();
 
         _repository.Update(item);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

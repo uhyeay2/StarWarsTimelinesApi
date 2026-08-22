@@ -69,17 +69,15 @@ public sealed class SpeciesService : ISpeciesService
             return null;
         }
 
-        if (request.Name is not null)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
-            item.Name = request.Name.Trim();
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        await ValidateHomePlanetAsync(request.HomePlanetId, cancellationToken);
 
-        if (request.HomePlanetId is Guid homePlanetId)
-        {
-            await ValidateHomePlanetAsync(homePlanetId, cancellationToken);
-            item.HomePlanetId = homePlanetId;
-        }
+        item.Name = request.Name.Trim();
+        item.HomePlanetId = request.HomePlanetId;
+
+        // The tracked read loads the HomePlanet navigation; clearing it keeps EF Core from restoring the old
+        // foreign key from the still-populated reference when the identifier is set to null.
+        item.HomePlanet = null;
 
         _repository.Update(item);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -120,7 +120,7 @@ public sealed class LocationServiceTests
             .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Location?)null);
 
-        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateLocationRequest(null));
+        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateLocationRequest("New name"));
 
         Assert.Null(result);
     }

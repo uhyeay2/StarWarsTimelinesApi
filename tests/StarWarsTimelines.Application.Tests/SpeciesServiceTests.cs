@@ -118,19 +118,37 @@ public sealed class SpeciesServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ChangesName()
+    public async Task UpdateAsync_ReplacesData()
     {
-        var item = new Species { Id = Guid.NewGuid(), Name = "Old name" };
+        var item = new Species { Id = Guid.NewGuid(), Name = "Old name", HomePlanetId = Guid.NewGuid() };
+        var planetId = Guid.NewGuid();
+        _repository
+            .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync(new Location { Id = planetId, Name = "Iridonia" });
+
+        var result = await _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("New name", planetId));
+
+        Assert.NotNull(result);
+        Assert.Equal("New name", result.Name);
+        Assert.Equal(planetId, result.HomePlanetId);
+        _repository.Verify(x => x.Update(It.Is<Species>(i => i.Name == "New name" && i.HomePlanetId == planetId)), Times.Once);
+        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithNullHomePlanet_ClearsHomePlanet()
+    {
+        var planetId = Guid.NewGuid();
+        var item = new Species { Id = Guid.NewGuid(), Name = "Zabrak", HomePlanetId = planetId };
         _repository
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        var result = await _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("New name"));
+        var result = await _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("Zabrak", null));
 
         Assert.NotNull(result);
-        Assert.Equal("New name", result.Name);
-        _repository.Verify(x => x.Update(It.Is<Species>(i => i.Name == "New name")), Times.Once);
-        _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Null(result.HomePlanetId);
     }
 
     [Fact]
@@ -143,10 +161,25 @@ public sealed class SpeciesServiceTests
             .ReturnsAsync(item);
         _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync(new Location { Id = planetId, Name = "Iridonia" });
 
-        var result = await _service.UpdateAsync(item.Id, new UpdateSpeciesRequest(HomePlanetId: planetId));
+        var result = await _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("Zabrak", planetId));
 
         Assert.NotNull(result);
         Assert.Equal(planetId, result.HomePlanetId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithUnknownHomePlanet_Throws()
+    {
+        var item = new Species { Id = Guid.NewGuid(), Name = "Keep me" };
+        var planetId = Guid.NewGuid();
+        _repository
+            .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(item);
+        _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
+
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("Mirialan", planetId)));
+
+        _repository.Verify(x => x.Update(It.IsAny<Species>()), Times.Never);
     }
 
     [Fact]
@@ -157,7 +190,7 @@ public sealed class SpeciesServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("   ")));
+        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("   ", null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Species>()), Times.Never);
     }
@@ -169,7 +202,7 @@ public sealed class SpeciesServiceTests
             .Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Species?)null);
 
-        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateSpeciesRequest(null));
+        var result = await _service.UpdateAsync(Guid.NewGuid(), new UpdateSpeciesRequest("New name", null));
 
         Assert.Null(result);
     }

@@ -121,12 +121,30 @@ public sealed class SpeciesEndpointsTests : ApiTestBase
     }
 
     [Fact]
+    public async Task UpdateSpecies_AsAdmin_ClearsHomePlanet()
+    {
+        var planet = await CreateLocationAsync("Old Home");
+        var created = await CreateSpeciesAsync("Zabrak", planet.Id);
+        var client = await CreateAdminClientAsync();
+
+        var updateResponse = await client.PutAsJsonAsync(
+            $"/api/species/{created.Id}", new UpdateSpeciesRequest("Zabrak", null));
+
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<SpeciesResponse>();
+
+        Assert.NotNull(updated);
+        Assert.Equal("Zabrak", updated.Name);
+        Assert.Null(updated.HomePlanetId);
+    }
+
+    [Fact]
     public async Task UpdateSpecies_AsStandardUser_ReturnsForbidden()
     {
         var created = await CreateSpeciesAsync("Keep me");
 
         var client = await CreateStandardClientAsync();
-        var updateResponse = await client.PutAsJsonAsync($"/api/species/{created.Id}", new UpdateSpeciesRequest("Nope"));
+        var updateResponse = await client.PutAsJsonAsync($"/api/species/{created.Id}", new UpdateSpeciesRequest("Nope", null));
 
         Assert.Equal(HttpStatusCode.Forbidden, updateResponse.StatusCode);
     }
@@ -171,10 +189,10 @@ public sealed class SpeciesEndpointsTests : ApiTestBase
         return (await response.Content.ReadFromJsonAsync<LocationResponse>())!;
     }
 
-    private async Task<SpeciesResponse> CreateSpeciesAsync(string name)
+    private async Task<SpeciesResponse> CreateSpeciesAsync(string name, Guid? homePlanetId = null)
     {
         var client = await CreateAdminClientAsync();
-        var response = await client.PostAsJsonAsync("/api/species", new CreateSpeciesRequest(name));
+        var response = await client.PostAsJsonAsync("/api/species", new CreateSpeciesRequest(name, HomePlanetId: homePlanetId));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<SpeciesResponse>())!;
     }

@@ -85,11 +85,7 @@ public sealed class CharacterService : ICharacterService
             return null;
         }
 
-        if (request.Name is not null)
-        {
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
-            item.Name = request.Name.Trim();
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
 
         if ((request.YearOfBirthEarliest is int) != (request.YearOfBirthLatest is int) ||
             (request.YearOfDeathEarliest is int) != (request.YearOfDeathLatest is int))
@@ -102,38 +98,23 @@ public sealed class CharacterService : ICharacterService
             request.YearOfBirthLatest,
             request.YearOfDeathEarliest,
             request.YearOfDeathLatest);
+        await ValidateReferencesAsync(
+            request.PlanetBornOnId,
+            request.SpeciesId,
+            cancellationToken);
 
-        if (request.YearOfBirthEarliest is int birthEarliest)
-        {
-            item.YearOfBirthEarliest = birthEarliest;
-            item.YearOfBirthLatest = request.YearOfBirthLatest!.Value;
-        }
+        item.Name = request.Name.Trim();
+        item.PlanetBornOnId = request.PlanetBornOnId;
+        item.YearOfBirthEarliest = request.YearOfBirthEarliest;
+        item.YearOfBirthLatest = request.YearOfBirthLatest;
+        item.YearOfDeathEarliest = request.YearOfDeathEarliest;
+        item.YearOfDeathLatest = request.YearOfDeathLatest;
+        item.SpeciesId = request.SpeciesId;
 
-        if (request.YearOfDeathEarliest is int deathEarliest)
-        {
-            item.YearOfDeathEarliest = deathEarliest;
-            item.YearOfDeathLatest = request.YearOfDeathLatest!.Value;
-        }
-
-        if (request.PlanetBornOnId is Guid planetBornOnId)
-        {
-            if (await _locations.GetByIdAsync(planetBornOnId, cancellationToken) is null)
-            {
-                throw new ArgumentException($"Location '{planetBornOnId}' does not exist.", nameof(request));
-            }
-
-            item.PlanetBornOnId = planetBornOnId;
-        }
-
-        if (request.SpeciesId is Guid speciesId)
-        {
-            if (await _species.GetByIdAsync(speciesId, cancellationToken) is null)
-            {
-                throw new ArgumentException($"Species '{speciesId}' does not exist.", nameof(request));
-            }
-
-            item.SpeciesId = speciesId;
-        }
+        // The tracked read loads the PlanetBornOn/Species navigations; clearing them keeps EF Core from
+        // restoring the old foreign keys from still-populated references when the identifiers are nulled.
+        item.PlanetBornOn = null;
+        item.Species = null;
 
         _repository.Update(item);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

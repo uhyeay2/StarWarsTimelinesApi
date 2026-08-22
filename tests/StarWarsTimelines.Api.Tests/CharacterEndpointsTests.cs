@@ -144,7 +144,7 @@ public sealed class CharacterEndpointsTests : ApiTestBase
 
         var updateResponse = await client.PutAsJsonAsync(
             $"/api/characters/{created.Id}",
-            new UpdateCharacterRequest(YearOfBirthEarliest: -900, YearOfBirthLatest: -890, SpeciesId: species.Id));
+            new UpdateCharacterRequest("Yoda", null, -900, -890, null, null, species.Id));
 
         updateResponse.EnsureSuccessStatusCode();
         var updated = await updateResponse.Content.ReadFromJsonAsync<CharacterResponse>();
@@ -157,12 +157,36 @@ public sealed class CharacterEndpointsTests : ApiTestBase
     }
 
     [Fact]
+    public async Task UpdateCharacter_AsAdmin_ClearsBiographyFields()
+    {
+        var created = await CreateCharacterAsync(
+            "Palpatine", yearOfBirthEarliest: -88, yearOfBirthLatest: -84, yearOfDeathEarliest: 4, yearOfDeathLatest: 35);
+        Assert.NotNull(created.YearOfBirthEarliest);
+
+        var client = await CreateAdminClientAsync();
+        var updateResponse = await client.PutAsJsonAsync(
+            $"/api/characters/{created.Id}",
+            new UpdateCharacterRequest("Sheev Palpatine", null, null, null, null, null, null));
+
+        updateResponse.EnsureSuccessStatusCode();
+        var updated = await updateResponse.Content.ReadFromJsonAsync<CharacterResponse>();
+
+        Assert.NotNull(updated);
+        Assert.Equal("Sheev Palpatine", updated.Name);
+        Assert.Null(updated.YearOfBirthEarliest);
+        Assert.Null(updated.YearOfBirthLatest);
+        Assert.Null(updated.YearOfDeathEarliest);
+        Assert.Null(updated.YearOfDeathLatest);
+    }
+
+    [Fact]
     public async Task UpdateCharacter_AsAdmin_ChangesName()
     {
         var created = await CreateCharacterAsync("Old name");
 
         var client = await CreateAdminClientAsync();
-        var updateResponse = await client.PutAsJsonAsync($"/api/characters/{created.Id}", new UpdateCharacterRequest("New name"));
+        var updateResponse = await client.PutAsJsonAsync(
+            $"/api/characters/{created.Id}", new UpdateCharacterRequest("New name", null, null, null, null, null, null));
 
         updateResponse.EnsureSuccessStatusCode();
         var updated = await updateResponse.Content.ReadFromJsonAsync<CharacterResponse>();
@@ -178,7 +202,8 @@ public sealed class CharacterEndpointsTests : ApiTestBase
         var created = await CreateCharacterAsync("Keep me");
 
         var client = await CreateStandardClientAsync();
-        var updateResponse = await client.PutAsJsonAsync($"/api/characters/{created.Id}", new UpdateCharacterRequest("Nope"));
+        var updateResponse = await client.PutAsJsonAsync(
+            $"/api/characters/{created.Id}", new UpdateCharacterRequest("Nope", null, null, null, null, null, null));
 
         Assert.Equal(HttpStatusCode.Forbidden, updateResponse.StatusCode);
     }
@@ -227,10 +252,17 @@ public sealed class CharacterEndpointsTests : ApiTestBase
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private async Task<CharacterResponse> CreateCharacterAsync(string name)
+    private async Task<CharacterResponse> CreateCharacterAsync(
+        string name,
+        int? yearOfBirthEarliest = null,
+        int? yearOfBirthLatest = null,
+        int? yearOfDeathEarliest = null,
+        int? yearOfDeathLatest = null)
     {
         var client = await CreateAdminClientAsync();
-        var response = await client.PostAsJsonAsync("/api/characters", new CreateCharacterRequest(name));
+        var response = await client.PostAsJsonAsync(
+            "/api/characters",
+            new CreateCharacterRequest(name, YearOfBirthEarliest: yearOfBirthEarliest, YearOfBirthLatest: yearOfBirthLatest, YearOfDeathEarliest: yearOfDeathEarliest, YearOfDeathLatest: yearOfDeathLatest));
         response.EnsureSuccessStatusCode();
         return (await response.Content.ReadFromJsonAsync<CharacterResponse>())!;
     }
