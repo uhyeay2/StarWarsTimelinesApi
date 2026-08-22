@@ -8,7 +8,8 @@ namespace StarWarsTimelines.Persistence.Repositories;
 /// EF Core-backed implementation of <see cref="ICharacterRepository"/>.
 /// </summary>
 /// <remarks>
-/// All reads use <c>AsNoTracking()</c> and never include related data, so only the minimal columns are loaded.
+/// All reads use <c>AsNoTracking()</c> and include the optional birth planet and species navigations so
+/// responses can carry their names; timeline event links are never included.
 /// </remarks>
 public sealed class CharacterRepository : ICharacterRepository
 {
@@ -24,12 +25,21 @@ public sealed class CharacterRepository : ICharacterRepository
     }
 
     /// <inheritdoc />
-    public async Task<Character?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        await _context.Characters.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+    public Task<Character?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
+        _context.Characters
+            .AsNoTracking()
+            .Include(x => x.PlanetBornOn)
+            .Include(x => x.Species)
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
 
     /// <inheritdoc />
     public async Task<IReadOnlyList<Character>> GetAllAsync(CancellationToken cancellationToken = default) =>
-        await _context.Characters.AsNoTracking().OrderBy(x => x.Name).ToListAsync(cancellationToken);
+        await _context.Characters
+            .AsNoTracking()
+            .Include(x => x.PlanetBornOn)
+            .Include(x => x.Species)
+            .OrderBy(x => x.Name)
+            .ToListAsync(cancellationToken);
 
     /// <inheritdoc />
     public async Task AddAsync(Character item, CancellationToken cancellationToken = default) =>

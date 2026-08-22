@@ -48,6 +48,11 @@ public sealed class AppDbContext : DbContext, IUnitOfWork
     public DbSet<Character> Characters => Set<Character>();
 
     /// <summary>
+    /// Gets the catalog of species that characters can belong to.
+    /// </summary>
+    public DbSet<Species> Species => Set<Species>();
+
+    /// <summary>
     /// Gets the catalog of locations that can be linked to timeline events.
     /// </summary>
     public DbSet<Location> Locations => Set<Location>();

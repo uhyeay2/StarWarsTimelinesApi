@@ -42,8 +42,8 @@ public static class SourceMaterialEventEndpoints
                         null,
                         new List<CharacterResponse>
                         {
-                            new(new Guid("00000000-0000-0000-0000-100000000022"), "Luke Skywalker"),
-                            new(new Guid("00000000-0000-0000-0000-100000000023"), "Han Solo")
+                            new(new Guid("00000000-0000-0000-0000-100000000022"), "Luke Skywalker", new Guid("00000000-0000-0000-0000-200000000044"), "Polis Massa", -19, -19, 34, 34, new Guid("00000000-0000-0000-0000-600000000001"), "Human"),
+                            new(new Guid("00000000-0000-0000-0000-100000000023"), "Han Solo", new Guid("00000000-0000-0000-0000-200000000046"), "Corellia", -29, -29, 35, 35, new Guid("00000000-0000-0000-0000-600000000001"), "Human")
                         },
                         new List<LocationResponse> { new(new Guid("00000000-0000-0000-0000-200000000019"), "Yavin 4") },
                         new List<VehicleResponse>
@@ -162,10 +162,10 @@ public static class SourceMaterialEventEndpoints
         null,
         new List<CharacterResponse>
         {
-            new(new Guid("00000000-0000-0000-0000-100000000008"), "Qui-Gon Jinn"),
-            new(new Guid("00000000-0000-0000-0000-100000000009"), "Obi-Wan Kenobi"),
-            new(new Guid("00000000-0000-0000-0000-100000000010"), "Padme Amidala"),
-            new(new Guid("00000000-0000-0000-0000-100000000011"), "Darth Maul")
+            new(new Guid("00000000-0000-0000-0000-100000000008"), "Qui-Gon Jinn", null, null, -80, -80, -32, -32, new Guid("00000000-0000-0000-0000-600000000001"), "Human"),
+            new(new Guid("00000000-0000-0000-0000-100000000009"), "Obi-Wan Kenobi", new Guid("00000000-0000-0000-0000-200000000048"), "Stewjon", -57, -57, 0, 0, new Guid("00000000-0000-0000-0000-600000000001"), "Human"),
+            new(new Guid("00000000-0000-0000-0000-100000000010"), "Padme Amidala", new Guid("00000000-0000-0000-0000-200000000005"), "Naboo", -46, -46, -19, -19, new Guid("00000000-0000-0000-0000-600000000001"), "Human"),
+            new(new Guid("00000000-0000-0000-0000-100000000011"), "Darth Maul", new Guid("00000000-0000-0000-0000-200000000039"), "Dathomir", -54, -54, -2, -2, new Guid("00000000-0000-0000-0000-600000000004"), "Zabrak")
         },
         new List<LocationResponse>
         {
@@ -192,10 +192,10 @@ public static class SourceMaterialEventEndpoints
         null,
         new List<CharacterResponse>
         {
-            new(new Guid("00000000-0000-0000-0000-100000000008"), "Qui-Gon Jinn"),
-            new(new Guid("00000000-0000-0000-0000-100000000009"), "Obi-Wan Kenobi"),
-            new(new Guid("00000000-0000-0000-0000-100000000010"), "Padme Amidala"),
-            new(new Guid("00000000-0000-0000-0000-100000000011"), "Darth Maul")
+            new(new Guid("00000000-0000-0000-0000-100000000008"), "Qui-Gon Jinn", null, null, -80, -80, -32, -32, new Guid("00000000-0000-0000-0000-600000000001"), "Human"),
+            new(new Guid("00000000-0000-0000-0000-100000000009"), "Obi-Wan Kenobi", new Guid("00000000-0000-0000-0000-200000000048"), "Stewjon", -57, -57, 0, 0, new Guid("00000000-0000-0000-0000-600000000001"), "Human"),
+            new(new Guid("00000000-0000-0000-0000-100000000010"), "Padme Amidala", new Guid("00000000-0000-0000-0000-200000000005"), "Naboo", -46, -46, -19, -19, new Guid("00000000-0000-0000-0000-600000000001"), "Human"),
+            new(new Guid("00000000-0000-0000-0000-100000000011"), "Darth Maul", new Guid("00000000-0000-0000-0000-200000000039"), "Dathomir", -54, -54, -2, -2, new Guid("00000000-0000-0000-0000-600000000004"), "Zabrak")
         },
         new List<LocationResponse>
         {

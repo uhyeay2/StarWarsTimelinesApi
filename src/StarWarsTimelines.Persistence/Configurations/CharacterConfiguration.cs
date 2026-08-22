@@ -5,7 +5,8 @@ using StarWarsTimelines.Domain.Entities;
 namespace StarWarsTimelines.Persistence.Configurations;
 
 /// <summary>
-/// Configures the EF Core mapping for the <see cref="Character"/> entity.
+/// Configures the EF Core mapping for the <see cref="Character"/> entity, including its optional biographical
+/// attributes (birth planet, birth and death year ranges, and species).
 /// </summary>
 public sealed class CharacterConfiguration : IEntityTypeConfiguration<Character>
 {
@@ -16,5 +17,15 @@ public sealed class CharacterConfiguration : IEntityTypeConfiguration<Character>
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Name).IsRequired().HasMaxLength(200);
         builder.HasIndex(x => x.Name).IsUnique();
+
+        builder.HasOne(x => x.PlanetBornOn)
+            .WithMany()
+            .HasForeignKey(x => x.PlanetBornOnId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne(x => x.Species)
+            .WithMany()
+            .HasForeignKey(x => x.SpeciesId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

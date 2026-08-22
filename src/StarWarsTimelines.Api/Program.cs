@@ -93,6 +93,7 @@ try
     builder.Services.AddScoped<ITokenService, TokenService>();
     builder.Services.AddScoped<ILibraryService, LibraryService>();
     builder.Services.AddScoped<ICharacterService, CharacterService>();
+    builder.Services.AddScoped<ISpeciesService, SpeciesService>();
     builder.Services.AddScoped<ILocationService, LocationService>();
     builder.Services.AddScoped<IVehicleService, VehicleService>();
     builder.Services.AddScoped<ISourceMaterialEventService, SourceMaterialEventService>();
@@ -151,6 +152,7 @@ try
     app.MapUserEndpoints();
     app.MapLibraryEndpoints();
     app.MapCharacterEndpoints();
+    app.MapSpeciesEndpoints();
     app.MapLocationEndpoints();
     app.MapVehicleEndpoints();
     app.MapSourceMaterialEventEndpoints();

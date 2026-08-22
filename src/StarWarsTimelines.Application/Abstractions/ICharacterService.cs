@@ -28,17 +28,23 @@ public interface ICharacterService
     /// <param name="request">The payload describing the new character.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The created character.</returns>
-    /// <exception cref="ArgumentException">Thrown when the request name is null or white space.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the request name is null or white space, a year range is invalid, or a referenced birth planet
+    /// or species does not exist.
+    /// </exception>
     Task<CharacterResponse> CreateAsync(CreateCharacterRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Updates an existing character's name.
+    /// Updates an existing character. Fields left null are unchanged.
     /// </summary>
     /// <param name="id">The unique identifier of the character to update.</param>
     /// <param name="request">The fields to change; null fields are left unchanged.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated character, or <c>null</c> if it does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when the request name is null or white space.</exception>
+    /// <exception cref="ArgumentException">
+    /// Thrown when the request name is null or white space, a year range is incomplete or invalid, or a
+    /// referenced birth planet or species does not exist.
+    /// </exception>
     Task<CharacterResponse?> UpdateAsync(Guid id, UpdateCharacterRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

@@ -106,4 +106,11 @@ public abstract class ApiTestBase : IClassFixture<StarWarsTimelinesApiFactory>
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         db.Database.ExecuteSqlRaw("DELETE FROM Vehicles");
     }
+
+    protected void ClearSpecies()
+    {
+        using var scope = Factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        db.Database.ExecuteSqlRaw("DELETE FROM Species");
+    }
 }

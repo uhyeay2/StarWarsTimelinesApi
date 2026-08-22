@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<ISourceMaterialUnitRepository, SourceMaterialUnitRepository>();
         services.AddScoped<IUserSourceMaterialUnitRepository, UserSourceMaterialUnitRepository>();
         services.AddScoped<ICharacterRepository, CharacterRepository>();
+        services.AddScoped<ISpeciesRepository, SpeciesRepository>();
         services.AddScoped<ILocationRepository, LocationRepository>();
         services.AddScoped<IVehicleRepository, VehicleRepository>();
         services.AddScoped<ISourceMaterialEventRepository, SourceMaterialEventRepository>();

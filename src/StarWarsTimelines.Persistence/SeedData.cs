@@ -411,8 +411,9 @@ public static class SeedData
             return;
         }
 
-        var characters = SeedCharacters(db);
         var locations = SeedLocations(db);
+        var species = SeedSpecies(db, locations);
+        var characters = SeedCharacters(db, locations, species);
         var vehicles = SeedVehicles(db);
 
         var index = 0;
@@ -472,20 +473,82 @@ public static class SeedData
     }
 
     /// <summary>
-    /// Seeds every character referenced by the timeline with a deterministic identifier.
-    /// </summary>
-    /// <param name="db">The database context used to insert seed data.</param>
-    /// <returns>A mapping from character name to its seeded identifier.</returns>
-    private static Dictionary<string, Guid> SeedCharacters(AppDbContext db) =>
-        SeedLookup(db.Characters, TimelineEvents.SelectMany(e => e.Characters).Distinct().ToArray(), 100_000_000_000, (name, id) => new Character { Id = id, Name = name });
-
-    /// <summary>
-    /// Seeds every location referenced by the timeline with a deterministic identifier.
+    /// Seeds every location referenced by the timeline, plus the additional catalog entries used as species home
+    /// planets and character birth planets, with deterministic identifiers.
     /// </summary>
     /// <param name="db">The database context used to insert seed data.</param>
     /// <returns>A mapping from location name to its seeded identifier.</returns>
-    private static Dictionary<string, Guid> SeedLocations(AppDbContext db) =>
-        SeedLookup(db.Locations, TimelineEvents.SelectMany(e => e.Locations).Distinct().ToArray(), 200_000_000_000, (name, id) => new Location { Id = id, Name = name });
+    private static Dictionary<string, Guid> SeedLocations(AppDbContext db)
+    {
+        var eventNames = TimelineEvents.SelectMany(e => e.Locations).Distinct().ToArray();
+        var names = eventNames
+            .Concat(ExtraLocationNames.Where(name => !eventNames.Contains(name)))
+            .ToArray();
+        return SeedLookup(db.Locations, names, 200_000_000_000, (name, id) => new Location { Id = id, Name = name });
+    }
+
+    /// <summary>
+    /// Seeds every character referenced by the timeline with a deterministic identifier, enriching characters
+    /// whose biographical details are known with their birth planet, birth and death years, and species.
+    /// </summary>
+    /// <param name="db">The database context used to insert seed data.</param>
+    /// <param name="locations">The mapping from location name to its seeded identifier.</param>
+    /// <param name="species">The mapping from species name to its seeded identifier.</param>
+    /// <returns>A mapping from character name to its seeded identifier.</returns>
+    private static Dictionary<string, Guid> SeedCharacters(
+        AppDbContext db,
+        IReadOnlyDictionary<string, Guid> locations,
+        IReadOnlyDictionary<string, Guid> species)
+    {
+        var map = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        var names = TimelineEvents.SelectMany(e => e.Characters).Distinct().ToArray();
+        for (var i = 0; i < names.Length; i++)
+        {
+            var name = names[i];
+            var id = new Guid($"00000000-0000-0000-0000-{100_000_000_000 + i + 1:D12}");
+            var details = CharacterDetails.GetValueOrDefault(name);
+            db.Characters.Add(new Character
+            {
+                Id = id,
+                Name = name,
+                PlanetBornOnId = details?.BirthPlanetName is { } planet ? locations[planet] : null,
+                YearOfBirthEarliest = details?.YearOfBirthEarliest,
+                YearOfBirthLatest = details?.YearOfBirthLatest,
+                YearOfDeathEarliest = details?.YearOfDeathEarliest,
+                YearOfDeathLatest = details?.YearOfDeathLatest,
+                SpeciesId = details?.SpeciesName is { } speciesName ? species[speciesName] : null
+            });
+            map[name] = id;
+        }
+
+        return map;
+    }
+
+    /// <summary>
+    /// Seeds the species catalog with deterministic identifiers, resolving each species' home planet against the
+    /// seeded locations. Species without a known home planet are seeded with a null reference.
+    /// </summary>
+    /// <param name="db">The database context used to insert seed data.</param>
+    /// <param name="locations">The mapping from location name to its seeded identifier.</param>
+    /// <returns>A mapping from species name to its seeded identifier.</returns>
+    private static Dictionary<string, Guid> SeedSpecies(AppDbContext db, IReadOnlyDictionary<string, Guid> locations)
+    {
+        var map = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
+        for (var i = 0; i < SeedSpeciesData.Length; i++)
+        {
+            var item = SeedSpeciesData[i];
+            var id = new Guid($"00000000-0000-0000-0000-{600_000_000_000 + i + 1:D12}");
+            db.Species.Add(new Species
+            {
+                Id = id,
+                Name = item.Name,
+                HomePlanetId = item.HomePlanetName is { } planet ? locations[planet] : null
+            });
+            map[item.Name] = id;
+        }
+
+        return map;
+    }
 
     /// <summary>
     /// Seeds every vehicle referenced by the timeline with a deterministic identifier.
@@ -786,4 +849,118 @@ public static class SeedData
             ["Bracca"],
             ["The Mantis"])
     ];
+
+    /// <summary>
+    /// Gets additional location names seeded as species home planets and character birth planets but not
+    /// referenced by any timeline event. They are appended after the event-derived locations so existing
+    /// deterministic identifiers remain stable.
+    /// </summary>
+    private static readonly string[] ExtraLocationNames =
+    [
+        "Ryloth",
+        "Dathomir",
+        "Shili",
+        "Iridonia",
+        "Duros",
+        "Tatooine",
+        "Polis Massa",
+        "Serenno",
+        "Corellia",
+        "Jakku",
+        "Stewjon"
+    ];
+
+    /// <summary>
+    /// Describes a seed species and its optional home planet.
+    /// </summary>
+    /// <param name="Name">The species' name.</param>
+    /// <param name="HomePlanetName">The name of the seeded location the species originates from, or <c>null</c> when it is unknown.</param>
+    private sealed record SeedSpeciesEntry(string Name, string? HomePlanetName);
+
+    /// <summary>
+    /// Gets the species catalog to seed, in deterministic identifier order.
+    /// </summary>
+    private static readonly SeedSpeciesEntry[] SeedSpeciesData =
+    [
+        new("Human", "Coruscant"),
+        new("Twi'lek", "Ryloth"),
+        new("Togruta", "Shili"),
+        new("Zabrak", "Iridonia"),
+        new("Wookiee", "Kashyyyk"),
+        new("Duros", "Duros")
+    ];
+
+    /// <summary>
+    /// Describes a character's biographical details for seeding.
+    /// </summary>
+    /// <param name="BirthPlanetName">The name of the seeded location the character was born on, or <c>null</c> when it is unknown.</param>
+    /// <param name="YearOfBirthEarliest">The chronologically earliest birth year (negative BBY, positive ABY), or <c>null</c> when unknown.</param>
+    /// <param name="YearOfBirthLatest">The chronologically latest birth year (negative BBY, positive ABY), or <c>null</c> when unknown.</param>
+    /// <param name="YearOfDeathEarliest">The chronologically earliest death year (negative BBY, positive ABY), or <c>null</c> when unknown.</param>
+    /// <param name="YearOfDeathLatest">The chronologically latest death year (negative BBY, positive ABY), or <c>null</c> when unknown.</param>
+    /// <param name="SpeciesName">The name of the seeded species the character belongs to, or <c>null</c> when it is unknown.</param>
+    private sealed record SeedCharacterDetails(
+        string? BirthPlanetName,
+        int? YearOfBirthEarliest,
+        int? YearOfBirthLatest,
+        int? YearOfDeathEarliest,
+        int? YearOfDeathLatest,
+        string? SpeciesName);
+
+    /// <summary>
+    /// Gets biographical details for the seeded characters whose birth planets, birth or death years, or species
+    /// are known. Characters missing from this set keep every attribute null, mirroring how much of the galaxy's
+    /// history is simply unknown.
+    /// </summary>
+    private static readonly Dictionary<string, SeedCharacterDetails> CharacterDetails = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Exact years: Luke and Leia born 19 BBY on Polis Massa; Palpatine's birth is only estimated between
+        // 88 and 84 BBY and his final death came long after his first.
+        ["Luke Skywalker"] = new("Polis Massa", -19, -19, 34, 34, "Human"),
+        ["Princess Leia Organa"] = new("Polis Massa", -19, -19, 34, 34, "Human"),
+        ["Emperor Palpatine"] = new("Naboo", -88, -84, 4, 35, "Human"),
+        ["Padme Amidala"] = new("Naboo", -46, -46, -19, -19, "Human"),
+        ["Anakin Skywalker"] = new("Tatooine", -41, -41, 4, 4, "Human"),
+        ["Darth Vader"] = new("Tatooine", -41, -41, 4, 4, "Human"),
+        ["Obi-Wan Kenobi"] = new("Stewjon", -57, -57, 0, 0, "Human"),
+        ["Qui-Gon Jinn"] = new(null, -80, -80, -32, -32, "Human"),
+        ["Count Dooku"] = new("Serenno", -102, -102, -19, -19, "Human"),
+        ["Darth Maul"] = new("Dathomir", -54, -54, -2, -2, "Zabrak"),
+        ["Mace Windu"] = new(null, -72, -72, -19, -19, "Human"),
+        ["Grand Moff Tarkin"] = new(null, -64, -64, 0, 0, "Human"),
+        ["Ahsoka Tano"] = new(null, -36, -36, null, null, "Togruta"),
+        ["Bo-Katan Kryze"] = new("Mandalore", null, null, null, null, "Human"),
+        // Yoda's origins and species are a mystery even in-universe; only his age range and death are known.
+        ["Yoda"] = new(null, -900, -890, 4, 4, null),
+        ["Grogu"] = new(null, -41, -41, null, null, null),
+        ["Han Solo"] = new("Corellia", -29, -29, 35, 35, "Human"),
+        ["Lando Calrissian"] = new(null, 31, 31, null, null, "Human"),
+        ["Rey"] = new("Jakku", 15, 15, null, null, "Human"),
+        ["Ben Solo"] = new(null, 5, 5, 35, 35, "Human"),
+        ["Poe Dameron"] = new("Yavin 4", 2, 2, null, null, "Human"),
+        ["Jacen Solo"] = new("Coruscant", 5, 5, 40, 40, "Human"),
+        ["Jaina Solo"] = new("Coruscant", 5, 5, null, null, "Human"),
+        ["Mara Jade Skywalker"] = new(null, null, null, 40, 40, "Human"),
+        ["Kanan Jarrus"] = new("Coruscant", -33, -33, -1, -1, "Human"),
+        ["Ezra Bridger"] = new("Lothal", -7, -7, null, null, "Human"),
+        ["Hera Syndulla"] = new("Ryloth", null, null, null, null, "Twi'lek"),
+        ["Ryo Chuchi"] = new("Ryloth", null, null, null, null, "Twi'lek"),
+        ["Sabine Wren"] = new(null, null, null, null, null, "Human"),
+        ["Morgan Elsbeth"] = new(null, null, null, null, null, "Human"),
+        ["Baylan Skoll"] = new(null, null, null, null, null, "Human"),
+        ["Depa Billaba"] = new(null, null, null, -19, -19, "Human"),
+        ["Cal Kestis"] = new(null, -26, -26, null, null, "Human"),
+        ["Cere Junda"] = new(null, null, null, -14, -14, "Human"),
+        ["Nick Rostu"] = new("Haruun Kal", null, null, null, null, "Human"),
+        ["Cad Bane"] = new("Duros", null, null, null, null, "Duros"),
+        ["Darth Bane"] = new(null, -1026, -1026, -980, -980, "Human"),
+        ["Lord Kaan"] = new(null, null, null, -1000, -1000, "Human"),
+        ["Revan"] = new(null, null, null, null, null, "Human"),
+        ["Rusk"] = new(null, null, null, null, null, "Human"),
+        ["The Sith Emperor"] = new(null, null, null, null, null, "Human"),
+        ["Chancellor Lina Soh"] = new(null, null, null, null, null, "Human"),
+        ["Avar Kriss"] = new(null, null, null, null, null, "Human"),
+        ["Moff Gideon"] = new(null, null, null, null, null, "Human"),
+        ["Din Djarin"] = new(null, null, null, null, null, "Human")
+    };
 }

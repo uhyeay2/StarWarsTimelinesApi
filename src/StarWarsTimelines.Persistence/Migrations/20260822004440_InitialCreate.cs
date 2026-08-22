@@ -12,18 +12,6 @@ namespace StarWarsTimelines.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "Characters",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Characters", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Locations",
                 columns: table => new
                 {
@@ -99,6 +87,25 @@ namespace StarWarsTimelines.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Species",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    HomePlanetId = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Species", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Species_Locations_HomePlanetId",
+                        column: x => x.HomePlanetId,
+                        principalTable: "Locations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "SourceMaterialUnits",
                 columns: table => new
                 {
@@ -148,6 +155,36 @@ namespace StarWarsTimelines.Persistence.Migrations
                         principalTable: "Users",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Characters",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
+                    PlanetBornOnId = table.Column<Guid>(type: "TEXT", nullable: true),
+                    YearOfBirthEarliest = table.Column<int>(type: "INTEGER", nullable: true),
+                    YearOfBirthLatest = table.Column<int>(type: "INTEGER", nullable: true),
+                    YearOfDeathEarliest = table.Column<int>(type: "INTEGER", nullable: true),
+                    YearOfDeathLatest = table.Column<int>(type: "INTEGER", nullable: true),
+                    SpeciesId = table.Column<Guid>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Characters", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Characters_Locations_PlanetBornOnId",
+                        column: x => x.PlanetBornOnId,
+                        principalTable: "Locations",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Characters_Species_SpeciesId",
+                        column: x => x.SpeciesId,
+                        principalTable: "Species",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -286,6 +323,16 @@ namespace StarWarsTimelines.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
+                name: "IX_Characters_PlanetBornOnId",
+                table: "Characters",
+                column: "PlanetBornOnId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Characters_SpeciesId",
+                table: "Characters",
+                column: "SpeciesId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_EventCharacters_CharacterId",
                 table: "EventCharacters",
                 column: "CharacterId");
@@ -331,6 +378,17 @@ namespace StarWarsTimelines.Persistence.Migrations
                 name: "IX_SourceMaterialUnits_SourceMaterialId_GroupNumber_Number",
                 table: "SourceMaterialUnits",
                 columns: new[] { "SourceMaterialId", "GroupNumber", "Number" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Species_HomePlanetId",
+                table: "Species",
+                column: "HomePlanetId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Species_Name",
+                table: "Species",
+                column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -387,9 +445,6 @@ namespace StarWarsTimelines.Persistence.Migrations
                 name: "Characters");
 
             migrationBuilder.DropTable(
-                name: "Locations");
-
-            migrationBuilder.DropTable(
                 name: "SourceMaterialEvents");
 
             migrationBuilder.DropTable(
@@ -399,7 +454,13 @@ namespace StarWarsTimelines.Persistence.Migrations
                 name: "Users");
 
             migrationBuilder.DropTable(
+                name: "Species");
+
+            migrationBuilder.DropTable(
                 name: "SourceMaterialUnits");
+
+            migrationBuilder.DropTable(
+                name: "Locations");
 
             migrationBuilder.DropTable(
                 name: "SourceMaterials");

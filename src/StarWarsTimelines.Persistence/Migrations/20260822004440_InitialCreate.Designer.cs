@@ -11,7 +11,7 @@ using StarWarsTimelines.Persistence;
 namespace StarWarsTimelines.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260817224716_InitialCreate")]
+    [Migration("20260822004440_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -31,10 +31,32 @@ namespace StarWarsTimelines.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("PlanetBornOnId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("SpeciesId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("YearOfBirthEarliest")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("YearOfBirthLatest")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("YearOfDeathEarliest")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("YearOfDeathLatest")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
                         .IsUnique();
+
+                    b.HasIndex("PlanetBornOnId");
+
+                    b.HasIndex("SpeciesId");
 
                     b.ToTable("Characters", (string)null);
                 });
@@ -249,6 +271,30 @@ namespace StarWarsTimelines.Persistence.Migrations
                     b.ToTable("SourceMaterialUnits", (string)null);
                 });
 
+            modelBuilder.Entity("StarWarsTimelines.Domain.Entities.Species", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("HomePlanetId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HomePlanetId");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Species", (string)null);
+                });
+
             modelBuilder.Entity("StarWarsTimelines.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -378,6 +424,23 @@ namespace StarWarsTimelines.Persistence.Migrations
                     b.ToTable("Vehicles", (string)null);
                 });
 
+            modelBuilder.Entity("StarWarsTimelines.Domain.Entities.Character", b =>
+                {
+                    b.HasOne("StarWarsTimelines.Domain.Entities.Location", "PlanetBornOn")
+                        .WithMany()
+                        .HasForeignKey("PlanetBornOnId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("StarWarsTimelines.Domain.Entities.Species", "Species")
+                        .WithMany()
+                        .HasForeignKey("SpeciesId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("PlanetBornOn");
+
+                    b.Navigation("Species");
+                });
+
             modelBuilder.Entity("StarWarsTimelines.Domain.Entities.EventCharacter", b =>
                 {
                     b.HasOne("StarWarsTimelines.Domain.Entities.Character", "Character")
@@ -462,6 +525,16 @@ namespace StarWarsTimelines.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("SourceMaterial");
+                });
+
+            modelBuilder.Entity("StarWarsTimelines.Domain.Entities.Species", b =>
+                {
+                    b.HasOne("StarWarsTimelines.Domain.Entities.Location", "HomePlanet")
+                        .WithMany()
+                        .HasForeignKey("HomePlanetId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("HomePlanet");
                 });
 
             modelBuilder.Entity("StarWarsTimelines.Domain.Entities.UserSourceMaterial", b =>
