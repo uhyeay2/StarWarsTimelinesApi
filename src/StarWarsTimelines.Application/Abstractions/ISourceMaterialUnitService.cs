@@ -22,7 +22,8 @@ public interface ISourceMaterialUnitService
     /// <param name="request">The unit data to create.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The created unit, or <c>null</c> when the source material does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when the unit number is invalid or already in use.</exception>
+    /// <exception cref="BadRequestException">Thrown when the unit number is invalid.</exception>
+    /// <exception cref="EntityAlreadyExistsException">Thrown when the unit number is already in use.</exception>
     Task<SourceMaterialUnitResponse?> CreateAsync(Guid sourceMaterialId, CreateSourceMaterialUnitRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -32,7 +33,8 @@ public interface ISourceMaterialUnitService
     /// <param name="request">The fields to change; null fields are left unchanged.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated unit, or <c>null</c> if it does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when the updated number is invalid or already in use.</exception>
+    /// <exception cref="BadRequestException">Thrown when the updated number is invalid.</exception>
+    /// <exception cref="EntityAlreadyExistsException">Thrown when the updated number is already in use.</exception>
     Task<SourceMaterialUnitResponse?> UpdateAsync(Guid id, UpdateSourceMaterialUnitRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

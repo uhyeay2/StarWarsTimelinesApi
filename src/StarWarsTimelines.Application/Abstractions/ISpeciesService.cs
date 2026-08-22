@@ -28,9 +28,8 @@ public interface ISpeciesService
     /// <param name="request">The payload describing the species to create.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The created species.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the name is blank or the referenced home planet does not exist.
-    /// </exception>
+    /// <exception cref="BadRequestException">Thrown when the name is blank.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when the referenced home planet does not exist.</exception>
     Task<SpeciesResponse> CreateAsync(CreateSpeciesRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -40,9 +39,8 @@ public interface ISpeciesService
     /// <param name="request">The payload describing the changes to apply.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated species, or <c>null</c> when no species has the identifier.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the name is blank or the referenced home planet does not exist.
-    /// </exception>
+    /// <exception cref="BadRequestException">Thrown when the name is blank.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when the referenced home planet does not exist.</exception>
     Task<SpeciesResponse?> UpdateAsync(Guid id, UpdateSpeciesRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

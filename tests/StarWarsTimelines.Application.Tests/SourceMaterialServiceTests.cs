@@ -54,7 +54,7 @@ public sealed class SourceMaterialServiceTests
     {
         var request = new CreateSourceMaterialRequest(title!, null, null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterial>(), It.IsAny<CancellationToken>()), Times.Never);
     }

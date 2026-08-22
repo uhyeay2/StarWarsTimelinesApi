@@ -276,7 +276,7 @@ public sealed class LibraryServiceTests
             .Setup(x => x.GetTrackedItemsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(items);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _service.ReorderAsync(userId, new List<Guid> { sourceOne.Id, Guid.NewGuid() }));
 
         Assert.Equal("orderedSourceMaterialIds", exception.ParamName);
@@ -299,7 +299,7 @@ public sealed class LibraryServiceTests
             .Setup(x => x.GetTrackedItemsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(items);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _service.ReorderAsync(userId, new List<Guid> { sourceOne.Id }));
 
         Assert.Equal("orderedSourceMaterialIds", exception.ParamName);
@@ -319,7 +319,7 @@ public sealed class LibraryServiceTests
             .Setup(x => x.GetTrackedItemsAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(items);
 
-        await Assert.ThrowsAsync<ArgumentException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => _service.ReorderAsync(userId, new List<Guid> { sourceOne.Id, sourceOne.Id }));
 
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -597,7 +597,7 @@ public sealed class LibraryServiceTests
             .Setup(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _service.UpdateAsync(userId, source.Id, new UpdateLibraryItemRequest(TrackingStatus.Completed, null)));
 
         Assert.Equal("UnitId", exception.ParamName);
@@ -886,7 +886,7 @@ public sealed class LibraryServiceTests
             .ReturnsAsync(item);
 
         var invalidUnitId = Guid.NewGuid();
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _service.UpdateAsync(userId, source.Id, new UpdateLibraryItemRequest(TrackingStatus.Completed, null, invalidUnitId)));
 
         Assert.Equal("UnitId", exception.ParamName);
@@ -1048,7 +1048,7 @@ public sealed class LibraryServiceTests
             .Setup(x => x.GetByIdAsync(userId, source.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
             () => _service.ClearUnitProgressAsync(userId, source.Id, Guid.NewGuid()));
 
         Assert.Equal("unitId", exception.ParamName);

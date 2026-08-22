@@ -79,7 +79,7 @@ public sealed class VehicleServiceTests
     [InlineData("   ")]
     public async Task CreateAsync_WithInvalidName_Throws(string? name)
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(new CreateVehicleRequest(name!)));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.CreateAsync(new CreateVehicleRequest(name!)));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<Vehicle>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -108,7 +108,7 @@ public sealed class VehicleServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateVehicleRequest("   ")));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.UpdateAsync(item.Id, new UpdateVehicleRequest("   ")));
 
         _repository.Verify(x => x.Update(It.IsAny<Vehicle>()), Times.Never);
     }

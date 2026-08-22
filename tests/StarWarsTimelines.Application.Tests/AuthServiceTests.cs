@@ -175,7 +175,7 @@ public sealed class AuthServiceTests
             .Setup(x => x.GetByUsernameAsync("padme", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<EntityAlreadyExistsException>(() =>
             _service.RegisterAsync(new RegisterRequest("padme", null, "other@example.com", "padme12345")));
 
         Assert.Equal(nameof(RegisterRequest.Username), exception.ParamName);
@@ -195,7 +195,7 @@ public sealed class AuthServiceTests
             .Setup(x => x.GetByEmailAsync("padme@example.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<EntityAlreadyExistsException>(() =>
             _service.RegisterAsync(new RegisterRequest("newuser", null, "  PADME@example.com ", "password123")));
 
         Assert.Equal(nameof(RegisterRequest.Email), exception.ParamName);
@@ -204,7 +204,7 @@ public sealed class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WithBlankUsername_Throws()
     {
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.RegisterAsync(new RegisterRequest("   ", null, "user@example.com", "password123")));
 
         Assert.Equal(nameof(RegisterRequest.Username), exception.ParamName);
@@ -213,7 +213,7 @@ public sealed class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WithInvalidEmail_Throws()
     {
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.RegisterAsync(new RegisterRequest("user", null, "not-an-email", "password123")));
 
         Assert.Equal(nameof(RegisterRequest.Email), exception.ParamName);
@@ -222,7 +222,7 @@ public sealed class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WithShortPassword_Throws()
     {
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.RegisterAsync(new RegisterRequest("user", null, "user@example.com", "12345")));
 
         Assert.Equal(nameof(RegisterRequest.Password), exception.ParamName);
@@ -255,7 +255,7 @@ public sealed class AuthServiceTests
             .Setup(x => x.GetByEmailVerificationTokenHashAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidTokenException>(() =>
             _service.VerifyEmailAsync("unknown-token"));
 
         Assert.StartsWith("The verification link is invalid or has expired.", exception.Message);
@@ -273,7 +273,7 @@ public sealed class AuthServiceTests
             .Setup(x => x.GetByEmailVerificationTokenHashAsync(HashToken(token), It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidTokenException>(() =>
             _service.VerifyEmailAsync(token));
 
         Assert.StartsWith("The verification link is invalid or has expired.", exception.Message);
@@ -282,7 +282,7 @@ public sealed class AuthServiceTests
     [Fact]
     public async Task VerifyEmailAsync_WithBlankToken_Throws()
     {
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.VerifyEmailAsync("  "));
 
         Assert.Equal("token", exception.ParamName);
@@ -354,7 +354,7 @@ public sealed class AuthServiceTests
     [Fact]
     public async Task ResendVerificationEmailAsync_WithBlankIdentifier_Throws()
     {
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.ResendVerificationEmailAsync("   "));
 
         Assert.Equal("usernameOrEmail", exception.ParamName);
@@ -394,7 +394,7 @@ public sealed class AuthServiceTests
     [Fact]
     public async Task RefreshAsync_WithBlankToken_Throws()
     {
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.RefreshAsync("  "));
 
         Assert.Equal("refreshToken", exception.ParamName);
@@ -407,7 +407,7 @@ public sealed class AuthServiceTests
             .Setup(x => x.GetByTokenAsync("unknown", It.IsAny<CancellationToken>()))
             .ReturnsAsync((RefreshToken?)null);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidTokenException>(() =>
             _service.RefreshAsync("unknown"));
 
         Assert.Contains("invalid", exception.Message);
@@ -428,7 +428,7 @@ public sealed class AuthServiceTests
         };
         _refreshTokens.Setup(x => x.GetByTokenAsync("revoked-token", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidTokenException>(() =>
             _service.RefreshAsync("revoked-token"));
 
         Assert.Contains("already been revoked", exception.Message);
@@ -449,7 +449,7 @@ public sealed class AuthServiceTests
         };
         _refreshTokens.Setup(x => x.GetByTokenAsync("expired-token", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidTokenException>(() =>
             _service.RefreshAsync("expired-token"));
 
         Assert.Contains("expired", exception.Message);
@@ -470,7 +470,7 @@ public sealed class AuthServiceTests
         _refreshTokens.Setup(x => x.GetByTokenAsync("orphaned-token", It.IsAny<CancellationToken>())).ReturnsAsync(stored);
         _users.Setup(x => x.GetByIdAsync(userId, It.IsAny<CancellationToken>())).ReturnsAsync((User?)null);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<InvalidTokenException>(() =>
             _service.RefreshAsync("orphaned-token"));
 
         Assert.Contains("no longer exists", exception.Message);

@@ -150,7 +150,7 @@ public sealed class CharacterServiceTests
     [InlineData("   ")]
     public async Task CreateAsync_WithInvalidName_Throws(string? name)
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(new CreateCharacterRequest(name!)));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.CreateAsync(new CreateCharacterRequest(name!)));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<Character>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -161,7 +161,7 @@ public sealed class CharacterServiceTests
         var planetId = Guid.NewGuid();
         _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<EntityNotFoundException>(() =>
             _service.CreateAsync(new CreateCharacterRequest("Luke Skywalker", planetId)));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<Character>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -173,7 +173,7 @@ public sealed class CharacterServiceTests
         var speciesId = Guid.NewGuid();
         _species.Setup(x => x.GetByIdAsync(speciesId, It.IsAny<CancellationToken>())).ReturnsAsync((Species?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<EntityNotFoundException>(() =>
             _service.CreateAsync(new CreateCharacterRequest("Ahsoka Tano", null, null, null, null, null, speciesId)));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<Character>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -182,14 +182,14 @@ public sealed class CharacterServiceTests
     [Fact]
     public async Task CreateAsync_WithInvertedBirthRange_Throws()
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.CreateAsync(new CreateCharacterRequest("Emperor Palpatine", null, -84, -88)));
     }
 
     [Fact]
     public async Task CreateAsync_WithInvertedDeathRange_Throws()
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.CreateAsync(new CreateCharacterRequest("Emperor Palpatine", null, null, null, 35, 4)));
     }
 
@@ -251,7 +251,7 @@ public sealed class CharacterServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Keep me", null, -36, null, null, null, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
@@ -265,7 +265,7 @@ public sealed class CharacterServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(
+        await Assert.ThrowsAsync<BadRequestException>(
             () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Keep me", null, null, null, 35, 4, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
@@ -281,7 +281,7 @@ public sealed class CharacterServiceTests
             .ReturnsAsync(item);
         _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(
+        await Assert.ThrowsAsync<EntityNotFoundException>(
             () => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("Keep me", planetId, null, null, null, null, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
@@ -314,7 +314,7 @@ public sealed class CharacterServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("   ", null, null, null, null, null, null)));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.UpdateAsync(item.Id, new UpdateCharacterRequest("   ", null, null, null, null, null, null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Character>()), Times.Never);
     }

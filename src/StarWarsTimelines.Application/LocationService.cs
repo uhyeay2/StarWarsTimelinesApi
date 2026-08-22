@@ -40,7 +40,7 @@ public sealed class LocationService : ILocationService
     /// <inheritdoc />
     public async Task<LocationResponse> CreateAsync(CreateLocationRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
 
         var item = new Location
         {
@@ -63,7 +63,7 @@ public sealed class LocationService : ILocationService
             return null;
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
         item.Name = request.Name.Trim();
 
         _repository.Update(item);
@@ -90,5 +90,18 @@ public sealed class LocationService : ILocationService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    /// <summary>
+    /// Ensures a location name was provided.
+    /// </summary>
+    /// <param name="name">The name to validate.</param>
+    /// <exception cref="BadRequestException">Thrown when the name is missing or blank.</exception>
+    private static void RequireName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new BadRequestException("A name is required.", nameof(name));
+        }
     }
 }

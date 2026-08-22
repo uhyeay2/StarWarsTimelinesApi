@@ -28,7 +28,7 @@ public interface IVehicleService
     /// <param name="request">The payload describing the new vehicle.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The created vehicle.</returns>
-    /// <exception cref="ArgumentException">Thrown when the request name is null or white space.</exception>
+    /// <exception cref="BadRequestException">Thrown when a non-null request name is null or white space.</exception>
     Task<VehicleResponse> CreateAsync(CreateVehicleRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -38,7 +38,7 @@ public interface IVehicleService
     /// <param name="request">The fields to change; null fields are left unchanged.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated vehicle, or <c>null</c> if it does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when the request name is null or white space.</exception>
+    /// <exception cref="BadRequestException">Thrown when a non-null request name is null or white space.</exception>
     Task<VehicleResponse?> UpdateAsync(Guid id, UpdateVehicleRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

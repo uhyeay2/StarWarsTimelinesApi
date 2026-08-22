@@ -89,32 +89,32 @@ public sealed class AuthService : IAuthService
 
         if (username.Length == 0)
         {
-            throw new ArgumentException("A username is required.", nameof(request.Username));
+            throw new BadRequestException("A username is required.", nameof(request.Username));
         }
 
         if (email.Length == 0 || !email.Contains('@'))
         {
-            throw new ArgumentException("A valid email address is required.", nameof(request.Email));
+            throw new BadRequestException("A valid email address is required.", nameof(request.Email));
         }
 
         if (string.IsNullOrEmpty(request.Password))
         {
-            throw new ArgumentException("A password is required.", nameof(request.Password));
+            throw new BadRequestException("A password is required.", nameof(request.Password));
         }
 
         if (request.Password.Length < 6)
         {
-            throw new ArgumentException("The password must be at least six characters long.", nameof(request.Password));
+            throw new BadRequestException("The password must be at least six characters long.", nameof(request.Password));
         }
 
         if (await _users.GetByUsernameAsync(username, cancellationToken) is not null)
         {
-            throw new ArgumentException("A user with this username already exists.", nameof(request.Username));
+            throw new EntityAlreadyExistsException("A user with this username already exists.", nameof(request.Username));
         }
 
         if (await _users.GetByEmailAsync(email, cancellationToken) is not null)
         {
-            throw new ArgumentException("A user with this email address is already registered.", nameof(request.Email));
+            throw new EntityAlreadyExistsException("A user with this email address is already registered.", nameof(request.Email));
         }
 
         var now = DateTime.UtcNow;
@@ -142,14 +142,14 @@ public sealed class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(token))
         {
-            throw new ArgumentException("The verification token is missing.", nameof(token));
+            throw new BadRequestException("The verification token is missing.", nameof(token));
         }
 
         var user = await _users.GetByEmailVerificationTokenHashAsync(HashToken(token), cancellationToken);
         if (user is null || user.EmailVerificationTokenExpiresAtUtc is null ||
             user.EmailVerificationTokenExpiresAtUtc.Value < DateTime.UtcNow)
         {
-            throw new ArgumentException("The verification link is invalid or has expired.", nameof(token));
+            throw new InvalidTokenException("The verification link is invalid or has expired.", nameof(token));
         }
 
         if (user.EmailVerifiedAtUtc is not null)
@@ -170,7 +170,7 @@ public sealed class AuthService : IAuthService
         var identifier = usernameOrEmail.Trim();
         if (identifier.Length == 0)
         {
-            throw new ArgumentException("A username or email address is required.", nameof(usernameOrEmail));
+            throw new BadRequestException("A username or email address is required.", nameof(usernameOrEmail));
         }
 
         var user = await _users.GetByUsernameAsync(identifier, cancellationToken);
@@ -193,13 +193,13 @@ public sealed class AuthService : IAuthService
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
         {
-            throw new ArgumentException("A refresh token is required.", nameof(refreshToken));
+            throw new BadRequestException("A refresh token is required.", nameof(refreshToken));
         }
 
         var stored = await _refreshTokens.GetByTokenAsync(refreshToken, cancellationToken);
         if (stored is null)
         {
-            throw new ArgumentException("The refresh token is invalid.", nameof(refreshToken));
+            throw new InvalidTokenException("The refresh token is invalid.", nameof(refreshToken));
         }
 
         if (stored.RevokedAtUtc is not null)
@@ -207,18 +207,18 @@ public sealed class AuthService : IAuthService
             // Potential token-reuse attack — revoke the entire family.
             await _refreshTokens.RevokeAllForUserAsync(stored.UserId, cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            throw new ArgumentException("The refresh token has already been revoked.", nameof(refreshToken));
+            throw new InvalidTokenException("The refresh token has already been revoked.", nameof(refreshToken));
         }
 
         if (stored.ExpiresAtUtc < DateTime.UtcNow)
         {
-            throw new ArgumentException("The refresh token has expired.", nameof(refreshToken));
+            throw new InvalidTokenException("The refresh token has expired.", nameof(refreshToken));
         }
 
         var user = await _users.GetByIdAsync(stored.UserId, cancellationToken);
         if (user is null)
         {
-            throw new ArgumentException("The user associated with this token no longer exists.", nameof(refreshToken));
+            throw new InvalidTokenException("The user associated with this token no longer exists.", nameof(refreshToken));
         }
 
         // Rotate: revoke old, issue new.

@@ -28,7 +28,7 @@ public interface ILocationService
     /// <param name="request">The payload describing the new location.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The created location.</returns>
-    /// <exception cref="ArgumentException">Thrown when the request name is null or white space.</exception>
+    /// <exception cref="BadRequestException">Thrown when a non-null request name is null or white space.</exception>
     Task<LocationResponse> CreateAsync(CreateLocationRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -38,7 +38,7 @@ public interface ILocationService
     /// <param name="request">The fields to change; null fields are left unchanged.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated location, or <c>null</c> if it does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when the request name is null or white space.</exception>
+    /// <exception cref="BadRequestException">Thrown when a non-null request name is null or white space.</exception>
     Task<LocationResponse?> UpdateAsync(Guid id, UpdateLocationRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

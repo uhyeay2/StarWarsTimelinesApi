@@ -28,7 +28,7 @@ public interface ISourceMaterialService
     /// <param name="request">The payload describing the new source material.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The created source material.</returns>
-    /// <exception cref="ArgumentException">Thrown when the request title is null or white space.</exception>
+    /// <exception cref="BadRequestException">Thrown when the request title is null or white space.</exception>
     Task<SourceMaterialResponse> CreateAsync(CreateSourceMaterialRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -38,7 +38,7 @@ public interface ISourceMaterialService
     /// <param name="request">The fields to change; null fields are left unchanged.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated source material, or <c>null</c> if it does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when a non-null request title is null or white space.</exception>
+    /// <exception cref="BadRequestException">Thrown when a non-null request title is null or white space.</exception>
     Task<SourceMaterialResponse?> UpdateAsync(Guid id, UpdateSourceMaterialRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>

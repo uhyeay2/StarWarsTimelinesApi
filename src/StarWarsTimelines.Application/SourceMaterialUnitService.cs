@@ -53,7 +53,7 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
         ValidateGroupNumber(request.GroupNumber);
         if (await _repository.GetByNumberAsync(sourceMaterialId, request.GroupNumber, request.Number, cancellationToken) is not null)
         {
-            throw new ArgumentException($"Unit '{request.Number}' already exists for this source material.", nameof(request.Number));
+            throw new EntityAlreadyExistsException($"Unit '{request.Number}' already exists for this source material.", nameof(request.Number));
         }
 
         var item = new SourceMaterialUnit
@@ -101,7 +101,7 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
             var existing = await _repository.GetByNumberAsync(item.SourceMaterialId, targetGroup, targetNumber, cancellationToken);
             if (existing is not null && existing.Id != item.Id)
             {
-                throw new ArgumentException($"Unit '{targetNumber}' already exists for this source material.", nameof(request.Number));
+                throw new EntityAlreadyExistsException($"Unit '{targetNumber}' already exists for this source material.", nameof(request.Number));
             }
 
             item.GroupNumber = targetGroup;
@@ -143,12 +143,12 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
     /// Ensures the unit number is a positive integer.
     /// </summary>
     /// <param name="number">The unit number to validate.</param>
-    /// <exception cref="ArgumentException">Thrown when the number is less than 1.</exception>
+    /// <exception cref="BadRequestException">Thrown when the number is less than 1.</exception>
     private static void ValidateNumber(int number)
     {
         if (number < 1)
         {
-            throw new ArgumentException("Unit number must be at least 1.", nameof(number));
+            throw new BadRequestException("Unit number must be at least 1.", nameof(number));
         }
     }
 
@@ -156,12 +156,12 @@ public sealed class SourceMaterialUnitService : ISourceMaterialUnitService
     /// Ensures the group number, when present, is a positive integer.
     /// </summary>
     /// <param name="groupNumber">The group number to validate, or <c>null</c>.</param>
-    /// <exception cref="ArgumentException">Thrown when the group number is less than 1.</exception>
+    /// <exception cref="BadRequestException">Thrown when the group number is less than 1.</exception>
     private static void ValidateGroupNumber(int? groupNumber)
     {
         if (groupNumber is < 1)
         {
-            throw new ArgumentException("Group number must be at least 1.", nameof(groupNumber));
+            throw new BadRequestException("Group number must be at least 1.", nameof(groupNumber));
         }
     }
 

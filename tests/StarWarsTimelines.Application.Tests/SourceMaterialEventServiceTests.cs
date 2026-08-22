@@ -113,7 +113,7 @@ public sealed class SourceMaterialEventServiceTests
     {
         var request = new CreateSourceMaterialEventRequest(title!, "desc", CanonType.Canon, 0, "0 BBY", null, Guid.NewGuid(), null, [], [], []);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -126,7 +126,7 @@ public sealed class SourceMaterialEventServiceTests
             .Setup(x => x.GetByIdAsync(request.SourceMaterialId, It.IsAny<CancellationToken>()))
             .ReturnsAsync((SourceMaterial?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -140,7 +140,7 @@ public sealed class SourceMaterialEventServiceTests
         _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
         _characters.Setup(x => x.GetByIdAsync(missingCharacterId, It.IsAny<CancellationToken>())).ReturnsAsync((Character?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -154,7 +154,7 @@ public sealed class SourceMaterialEventServiceTests
         _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
         _locations.Setup(x => x.GetByIdAsync(missingLocationId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -168,7 +168,7 @@ public sealed class SourceMaterialEventServiceTests
         _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
         _vehicles.Setup(x => x.GetByIdAsync(missingVehicleId, It.IsAny<CancellationToken>())).ReturnsAsync((Vehicle?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -182,7 +182,7 @@ public sealed class SourceMaterialEventServiceTests
         _catalog.Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>())).ReturnsAsync(source);
         _units.Setup(x => x.GetByIdAsync(missingUnitId, It.IsAny<CancellationToken>())).ReturnsAsync((SourceMaterialUnit?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -198,7 +198,7 @@ public sealed class SourceMaterialEventServiceTests
             .Setup(x => x.GetByIdAsync(unitId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SourceMaterialUnit { Id = unitId, SourceMaterialId = Guid.NewGuid() });
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(request));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.CreateAsync(request));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<SourceMaterialEvent>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -344,7 +344,7 @@ public sealed class SourceMaterialEventServiceTests
         _repository.Setup(x => x.GetByIdTrackedAsync(existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
         _catalog.Setup(x => x.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync((SourceMaterial?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.UpdateAsync(
             existing.Id,
             new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, Guid.NewGuid(), null, null, null, null)));
 
@@ -392,7 +392,7 @@ public sealed class SourceMaterialEventServiceTests
             .Setup(x => x.GetByIdAsync(unitId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new SourceMaterialUnit { Id = unitId, SourceMaterialId = Guid.NewGuid() });
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.UpdateAsync(
             existing.Id,
             new UpdateSourceMaterialEventRequest(null, null, null, null, null, null, null, unitId, null, null, null)));
 
@@ -405,7 +405,7 @@ public sealed class SourceMaterialEventServiceTests
         var existing = Event();
         _repository.Setup(x => x.GetByIdTrackedAsync(existing.Id, It.IsAny<CancellationToken>())).ReturnsAsync(existing);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.UpdateAsync(
             existing.Id,
             new UpdateSourceMaterialEventRequest("   ", null, null, null, null, null, null, null, null, null, null)));
 

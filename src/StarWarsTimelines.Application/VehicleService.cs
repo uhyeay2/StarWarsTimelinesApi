@@ -40,7 +40,7 @@ public sealed class VehicleService : IVehicleService
     /// <inheritdoc />
     public async Task<VehicleResponse> CreateAsync(CreateVehicleRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
 
         var item = new Vehicle
         {
@@ -63,7 +63,7 @@ public sealed class VehicleService : IVehicleService
             return null;
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
         item.Name = request.Name.Trim();
 
         _repository.Update(item);
@@ -90,5 +90,18 @@ public sealed class VehicleService : IVehicleService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    /// <summary>
+    /// Ensures a vehicle name was provided.
+    /// </summary>
+    /// <param name="name">The name to validate.</param>
+    /// <exception cref="BadRequestException">Thrown when the name is missing or blank.</exception>
+    private static void RequireName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new BadRequestException("A name is required.", nameof(name));
+        }
     }
 }

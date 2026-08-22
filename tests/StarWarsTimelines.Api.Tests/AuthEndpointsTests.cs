@@ -74,7 +74,7 @@ public sealed class AuthEndpointsTests : ApiTestBase
     }
 
     [Fact]
-    public async Task Register_WithDuplicateEmail_CaseInsensitive_ReturnsBadRequest()
+    public async Task Register_WithDuplicateEmail_CaseInsensitive_ReturnsConflict()
     {
         await RegisterUserAsync(new RegisterRequest("first", null, "Shared@Example.com", "password123"));
 
@@ -82,18 +82,18 @@ public sealed class AuthEndpointsTests : ApiTestBase
             "/api/auth/register",
             new RegisterRequest("second", null, "shared@example.com", "password123"));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("already registered", await ReadProblemDetailAsync(response));
     }
 
     [Fact]
-    public async Task Register_WithDuplicateUsername_ReturnsBadRequest()
+    public async Task Register_WithDuplicateUsername_ReturnsConflict()
     {
         var response = await Client.PostAsJsonAsync(
             "/api/auth/register",
             new RegisterRequest("padme", null, "new@example.com", "password123"));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("already exists", await ReadProblemDetailAsync(response));
     }
 

@@ -58,10 +58,15 @@ public sealed class CatalogEventSseEndpointTests : ApiTestBase
                 var request = new HttpRequestMessage(HttpMethod.Get, "/api/catalog-events");
                 using var response = await adminClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cts.Token);
                 var reader = new StreamReader(await response.Content.ReadAsStreamAsync(cts.Token));
-                while (!reader.EndOfStream && !cts.Token.IsCancellationRequested)
+                while (!cts.Token.IsCancellationRequested)
                 {
                     var line = await reader.ReadLineAsync(cts.Token);
-                    if (line?.StartsWith("data: ") == true)
+                    if (line is null)
+                    {
+                        return null; // stream ended
+                    }
+
+                    if (line.StartsWith("data: "))
                     {
                         return line[6..]; // strip "data: " prefix
                     }

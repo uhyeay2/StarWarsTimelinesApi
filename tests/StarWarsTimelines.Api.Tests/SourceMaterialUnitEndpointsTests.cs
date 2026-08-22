@@ -97,7 +97,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
     }
 
     [Fact]
-    public async Task CreateUnit_AsAdmin_WithDuplicateNumber_ReturnsBadRequest()
+    public async Task CreateUnit_AsAdmin_WithDuplicateNumber_ReturnsConflict()
     {
         var client = await CreateAdminClientAsync();
 
@@ -105,7 +105,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
             $"/api/source-materials/{MandalorianId}/units",
             new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 1, null));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]
@@ -152,7 +152,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
     }
 
     [Fact]
-    public async Task UpdateUnit_AsAdmin_WithDuplicateNumber_ReturnsBadRequest()
+    public async Task UpdateUnit_AsAdmin_WithDuplicateNumber_ReturnsConflict()
     {
         var client = await CreateAdminClientAsync();
         await CreateUnitAsync(MandalorianId, 20);
@@ -161,7 +161,7 @@ public sealed class SourceMaterialUnitEndpointsTests : ApiTestBase
             $"/api/source-materials/{MandalorianId}/units/{MandalorianUnitOneId}",
             new UpdateSourceMaterialUnitRequest(null, 1, 20, null));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
     }
 
     [Fact]

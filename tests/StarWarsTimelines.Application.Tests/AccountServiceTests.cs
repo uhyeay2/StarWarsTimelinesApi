@@ -87,7 +87,7 @@ public sealed class AccountServiceTests
         var user = SeedUser("padme", "padme123", UserRole.Standard);
         _users.Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.UpdateDisplayNameAsync(user.Id, "   "));
 
         Assert.Equal("displayName", exception.ParamName);
@@ -168,7 +168,7 @@ public sealed class AccountServiceTests
         _users.Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
         _users.Setup(x => x.GetByEmailAsync("taken@example.com", It.IsAny<CancellationToken>())).ReturnsAsync(other);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<EntityAlreadyExistsException>(() =>
             _service.UpdateEmailAsync(user.Id, "taken@example.com"));
 
         Assert.Equal("email", exception.ParamName);
@@ -182,7 +182,7 @@ public sealed class AccountServiceTests
         var user = SeedUser("padme", "padme123", UserRole.Standard);
         _users.Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.UpdateEmailAsync(user.Id, "not-an-email"));
 
         Assert.Equal("email", exception.ParamName);
@@ -222,7 +222,7 @@ public sealed class AccountServiceTests
         var originalHash = user.PasswordHash;
         _users.Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.UpdatePasswordAsync(user.Id, "wrong-password", "noblequeen1"));
 
         Assert.Equal("currentPassword", exception.ParamName);
@@ -237,7 +237,7 @@ public sealed class AccountServiceTests
         var user = SeedUser("padme", "padme123", UserRole.Standard);
         _users.Setup(x => x.GetByIdAsync(user.Id, It.IsAny<CancellationToken>())).ReturnsAsync(user);
 
-        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.UpdatePasswordAsync(user.Id, "padme123", "123"));
 
         Assert.Equal("newPassword", exception.ParamName);

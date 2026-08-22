@@ -48,7 +48,7 @@ public interface ILibraryService
     /// <param name="request">The fields to change; null fields are left unchanged.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated library item, or <c>null</c> if it does not exist.</returns>
-    /// <exception cref="ArgumentException">
+    /// <exception cref="BadRequestException">
     /// Thrown when <paramref name="request"/> sets a status on a source material that has season/volume sub-units
     /// without specifying a <see cref="UpdateLibraryItemRequest.UnitId"/>.
     /// </exception>
@@ -76,7 +76,7 @@ public interface ILibraryService
     /// </param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The re-ordered library.</returns>
-    /// <exception cref="ArgumentException">
+    /// <exception cref="BadRequestException">
     /// Thrown when <paramref name="orderedSourceMaterialIds"/> does not contain exactly the user's library items,
     /// each exactly once.
     /// </exception>
@@ -115,7 +115,7 @@ public interface ILibraryService
     /// <param name="unitId">The identifier of the unit whose progress is cleared.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns><c>true</c> when the request was applied (the library entry may have been removed with it); <c>false</c> when the item does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when the unit does not belong to the source material.</exception>
+    /// <exception cref="BadRequestException">Thrown when the unit does not belong to the source material.</exception>
     Task<bool> ClearUnitProgressAsync(
         Guid userId,
         Guid sourceMaterialId,

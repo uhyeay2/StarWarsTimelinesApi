@@ -62,7 +62,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     /// <inheritdoc />
     public async Task<SourceMaterialEventResponse> CreateAsync(CreateSourceMaterialEventRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Title);
+        RequireTitle(request.Title);
         await ValidateReferencesAsync(request.SourceMaterialId, request.SourceMaterialUnitId, request.CharacterIds, request.LocationIds, request.VehicleIds, cancellationToken);
 
         var item = new SourceMaterialEvent
@@ -99,7 +99,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
 
         if (request.Title is not null)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.Title);
+            RequireTitle(request.Title);
             item.Title = request.Title.Trim();
         }
 
@@ -129,7 +129,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
         {
             if (await _catalog.GetByIdAsync(sourceMaterialId, cancellationToken) is null)
             {
-                throw new ArgumentException($"Source material '{sourceMaterialId}' does not exist.", nameof(request));
+                throw new EntityNotFoundException($"Source material '{sourceMaterialId}' does not exist.", nameof(request));
             }
 
             item.SourceMaterialId = sourceMaterialId;
@@ -190,7 +190,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     /// <param name="locationIds">The location identifiers to validate.</param>
     /// <param name="vehicleIds">The vehicle identifiers to validate.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">
+    /// <exception cref="EntityNotFoundException">
     /// Thrown when the source material, its unit, or any referenced character, location, or vehicle does not exist.
     /// </exception>
     private async Task ValidateReferencesAsync(
@@ -203,7 +203,7 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     {
         if (await _catalog.GetByIdAsync(sourceMaterialId, cancellationToken) is null)
         {
-            throw new ArgumentException($"Source material '{sourceMaterialId}' does not exist.", nameof(sourceMaterialId));
+            throw new EntityNotFoundException($"Source material '{sourceMaterialId}' does not exist.", nameof(sourceMaterialId));
         }
 
         if (sourceMaterialUnitId is Guid unitId)
@@ -222,18 +222,19 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     /// <param name="sourceMaterialId">The identifier of the source material the unit must belong to.</param>
     /// <param name="unitId">The identifier of the unit to validate.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">Thrown when the unit does not exist or belongs to another source material.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when the unit does not exist.</exception>
+    /// <exception cref="BadRequestException">Thrown when the unit belongs to another source material.</exception>
     private async Task ValidateUnitLinkAsync(Guid sourceMaterialId, Guid unitId, CancellationToken cancellationToken)
     {
         var unit = await _units.GetByIdAsync(unitId, cancellationToken);
         if (unit is null)
         {
-            throw new ArgumentException($"Source material unit '{unitId}' does not exist.", nameof(unitId));
+            throw new EntityNotFoundException($"Source material unit '{unitId}' does not exist.", nameof(unitId));
         }
 
         if (unit.SourceMaterialId != sourceMaterialId)
         {
-            throw new ArgumentException($"Source material unit '{unitId}' does not belong to the event's source material.", nameof(unitId));
+            throw new BadRequestException($"Source material unit '{unitId}' does not belong to the event's source material.", nameof(unitId));
         }
     }
 
@@ -242,14 +243,14 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     /// </summary>
     /// <param name="characterIds">The character identifiers to validate.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">Thrown when a referenced character does not exist.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when a referenced character does not exist.</exception>
     private async Task ValidateCharactersAsync(IReadOnlyList<Guid> characterIds, CancellationToken cancellationToken)
     {
         foreach (var id in characterIds)
         {
             if (await _characters.GetByIdAsync(id, cancellationToken) is null)
             {
-                throw new ArgumentException($"Character '{id}' does not exist.", nameof(characterIds));
+                throw new EntityNotFoundException($"Character '{id}' does not exist.", nameof(characterIds));
             }
         }
     }
@@ -259,14 +260,14 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     /// </summary>
     /// <param name="locationIds">The location identifiers to validate.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">Thrown when a referenced location does not exist.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when a referenced location does not exist.</exception>
     private async Task ValidateLocationsAsync(IReadOnlyList<Guid> locationIds, CancellationToken cancellationToken)
     {
         foreach (var id in locationIds)
         {
             if (await _locations.GetByIdAsync(id, cancellationToken) is null)
             {
-                throw new ArgumentException($"Location '{id}' does not exist.", nameof(locationIds));
+                throw new EntityNotFoundException($"Location '{id}' does not exist.", nameof(locationIds));
             }
         }
     }
@@ -276,15 +277,28 @@ public sealed class SourceMaterialEventService : ISourceMaterialEventService
     /// </summary>
     /// <param name="vehicleIds">The vehicle identifiers to validate.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">Thrown when a referenced vehicle does not exist.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when a referenced vehicle does not exist.</exception>
     private async Task ValidateVehiclesAsync(IReadOnlyList<Guid> vehicleIds, CancellationToken cancellationToken)
     {
         foreach (var id in vehicleIds)
         {
             if (await _vehicles.GetByIdAsync(id, cancellationToken) is null)
             {
-                throw new ArgumentException($"Vehicle '{id}' does not exist.", nameof(vehicleIds));
+                throw new EntityNotFoundException($"Vehicle '{id}' does not exist.", nameof(vehicleIds));
             }
+        }
+    }
+
+    /// <summary>
+    /// Ensures an event title was provided.
+    /// </summary>
+    /// <param name="title">The title to validate.</param>
+    /// <exception cref="BadRequestException">Thrown when the title is missing or blank.</exception>
+    private static void RequireTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new BadRequestException("A title is required.", nameof(title));
         }
     }
 

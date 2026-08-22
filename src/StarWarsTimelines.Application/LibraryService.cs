@@ -120,7 +120,7 @@ public sealed class LibraryService : ILibraryService
         {
             if (request.UnitId is null)
             {
-                throw new ArgumentException(
+                throw new BadRequestException(
                     "UnitId is required when setting status on a source material that has season/volume sub-units.",
                     nameof(request.UnitId));
             }
@@ -128,7 +128,7 @@ public sealed class LibraryService : ILibraryService
             var unit = item.SourceMaterial.SourceMaterialUnits.SingleOrDefault(u => u.Id == request.UnitId);
             if (unit is null)
             {
-                throw new ArgumentException(
+                throw new BadRequestException(
                     "The specified unit does not belong to this source material.",
                     nameof(request.UnitId));
             }
@@ -203,7 +203,7 @@ public sealed class LibraryService : ILibraryService
             orderedSourceMaterialIds.Distinct().Count() != items.Count ||
             items.Any(item => !orderedSourceMaterialIds.Contains(item.SourceMaterialId)))
         {
-            throw new ArgumentException(
+            throw new BadRequestException(
                 "The ordered list must contain exactly the user's library items, each exactly once.",
                 nameof(orderedSourceMaterialIds));
         }
@@ -262,7 +262,7 @@ public sealed class LibraryService : ILibraryService
         var unit = item.SourceMaterial.SourceMaterialUnits.SingleOrDefault(u => u.Id == unitId);
         if (unit is null)
         {
-            throw new ArgumentException(
+            throw new BadRequestException(
                 "The specified unit does not belong to this source material.",
                 nameof(unitId));
         }

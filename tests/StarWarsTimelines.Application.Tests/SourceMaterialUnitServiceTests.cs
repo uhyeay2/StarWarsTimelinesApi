@@ -116,7 +116,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByNumberAsync(source.Id, null, 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<EntityAlreadyExistsException>(() =>
             _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, null, 1, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -129,7 +129,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(source);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, null, 0, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -169,7 +169,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByNumberAsync(source.Id, 1, 1, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existing);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<EntityAlreadyExistsException>(() =>
             _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 1, 1, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -202,7 +202,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByIdAsync(source.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(source);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<BadRequestException>(() =>
             _service.CreateAsync(source.Id, new CreateSourceMaterialUnitRequest(UnitType.Episode, 0, 1, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -295,7 +295,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByNumberAsync(source.Id, null, 2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(other);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<EntityAlreadyExistsException>(() =>
             _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, null, 2, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -315,7 +315,7 @@ public sealed class SourceMaterialUnitServiceTests
             .Setup(x => x.GetByNumberAsync(source.Id, 2, 2, It.IsAny<CancellationToken>()))
             .ReturnsAsync(other);
 
-        await Assert.ThrowsAsync<ArgumentException>(() =>
+        await Assert.ThrowsAsync<EntityAlreadyExistsException>(() =>
             _service.UpdateAsync(item.Id, new UpdateSourceMaterialUnitRequest(null, 2, 2, null)));
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }

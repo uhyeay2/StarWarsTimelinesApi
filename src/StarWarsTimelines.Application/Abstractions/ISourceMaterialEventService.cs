@@ -28,9 +28,9 @@ public interface ISourceMaterialEventService
     /// <param name="request">The payload describing the new event.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The created event with its linked entities.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the title is null or white space, or when the source material or any linked character, location,
-    /// or vehicle does not exist.
+    /// <exception cref="BadRequestException">Thrown when the title is null or white space.</exception>
+    /// <exception cref="EntityNotFoundException">
+    /// Thrown when the source material or any linked character, location, or vehicle does not exist.
     /// </exception>
     Task<SourceMaterialEventResponse> CreateAsync(CreateSourceMaterialEventRequest request, CancellationToken cancellationToken = default);
 
@@ -41,9 +41,11 @@ public interface ISourceMaterialEventService
     /// <param name="request">The fields to change; null fields are left unchanged.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated event, or <c>null</c> if it does not exist.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when a non-null title is null or white space, or when a referenced source material, character,
-    /// location, or vehicle does not exist.
+    /// <exception cref="BadRequestException">
+    /// Thrown when a non-null title is null or white space.
+    /// </exception>
+    /// <exception cref="EntityNotFoundException">
+    /// Thrown when a referenced source material, character, location, or vehicle does not exist.
     /// </exception>
     Task<SourceMaterialEventResponse?> UpdateAsync(Guid id, UpdateSourceMaterialEventRequest request, CancellationToken cancellationToken = default);
 

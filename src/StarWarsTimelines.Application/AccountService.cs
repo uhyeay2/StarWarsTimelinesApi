@@ -62,7 +62,7 @@ public sealed class AccountService : IAccountService
         var name = displayName.Trim();
         if (name.Length == 0)
         {
-            throw new ArgumentException("A display name is required.", nameof(displayName));
+            throw new BadRequestException("A display name is required.", nameof(displayName));
         }
 
         user.DisplayName = name;
@@ -86,14 +86,14 @@ public sealed class AccountService : IAccountService
         var normalizedEmail = email.Trim().ToLowerInvariant();
         if (normalizedEmail.Length == 0 || !normalizedEmail.Contains('@'))
         {
-            throw new ArgumentException("A valid email address is required.", nameof(email));
+            throw new BadRequestException("A valid email address is required.", nameof(email));
         }
 
         if (normalizedEmail != user.Email)
         {
             if (await _users.GetByEmailAsync(normalizedEmail, cancellationToken) is not null)
             {
-                throw new ArgumentException(
+                throw new EntityAlreadyExistsException(
                     "A user with this email address is already registered.",
                     nameof(email));
             }
@@ -125,17 +125,17 @@ public sealed class AccountService : IAccountService
         var verification = _hasher.VerifyHashedPassword(null!, user.PasswordHash, currentPassword);
         if (verification == PasswordVerificationResult.Failed)
         {
-            throw new ArgumentException("The current password is incorrect.", nameof(currentPassword));
+            throw new BadRequestException("The current password is incorrect.", nameof(currentPassword));
         }
 
         if (string.IsNullOrEmpty(newPassword))
         {
-            throw new ArgumentException("A new password is required.", nameof(newPassword));
+            throw new BadRequestException("A new password is required.", nameof(newPassword));
         }
 
         if (newPassword.Length < 6)
         {
-            throw new ArgumentException("The new password must be at least six characters long.", nameof(newPassword));
+            throw new BadRequestException("The new password must be at least six characters long.", nameof(newPassword));
         }
 
         user.PasswordHash = _hasher.HashPassword(null!, newPassword);

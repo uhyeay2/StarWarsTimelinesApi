@@ -43,7 +43,7 @@ public sealed class SpeciesService : ISpeciesService
     /// <inheritdoc />
     public async Task<SpeciesResponse> CreateAsync(CreateSpeciesRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
         await ValidateHomePlanetAsync(request.HomePlanetId, cancellationToken);
 
         var item = new Species
@@ -69,7 +69,7 @@ public sealed class SpeciesService : ISpeciesService
             return null;
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
         await ValidateHomePlanetAsync(request.HomePlanetId, cancellationToken);
 
         item.Name = request.Name.Trim();
@@ -106,12 +106,25 @@ public sealed class SpeciesService : ISpeciesService
     /// </summary>
     /// <param name="homePlanetId">The location identifier to validate, or <c>null</c> for an unknown planet.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">Thrown when the referenced location does not exist.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when the referenced location does not exist.</exception>
     private async Task ValidateHomePlanetAsync(Guid? homePlanetId, CancellationToken cancellationToken)
     {
         if (homePlanetId is Guid id && await _locations.GetByIdAsync(id, cancellationToken) is null)
         {
-            throw new ArgumentException($"Location '{id}' does not exist.", nameof(homePlanetId));
+            throw new EntityNotFoundException($"Location '{id}' does not exist.", nameof(homePlanetId));
+        }
+    }
+
+    /// <summary>
+    /// Ensures a species name was provided.
+    /// </summary>
+    /// <param name="name">The name to validate.</param>
+    /// <exception cref="BadRequestException">Thrown when the name is missing or blank.</exception>
+    private static void RequireName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new BadRequestException("A name is required.", nameof(name));
         }
     }
 }

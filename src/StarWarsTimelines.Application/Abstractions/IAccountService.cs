@@ -22,7 +22,7 @@ public interface IAccountService
     /// <param name="displayName">The new display name.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated account, or <c>null</c> when the user does not exist.</returns>
-    /// <exception cref="ArgumentException">Thrown when the display name is blank.</exception>
+    /// <exception cref="BadRequestException">Thrown when the display name is blank.</exception>
     Task<UserAccountResponse?> UpdateDisplayNameAsync(Guid userId, string displayName, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -33,9 +33,8 @@ public interface IAccountService
     /// <param name="email">The new email address.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated account, or <c>null</c> when the user does not exist.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the email is invalid or already in use by another account.
-    /// </exception>
+    /// <exception cref="BadRequestException">Thrown when the email is invalid.</exception>
+    /// <exception cref="EntityAlreadyExistsException">Thrown when the email is already in use by another account.</exception>
     Task<UserAccountResponse?> UpdateEmailAsync(Guid userId, string email, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -47,7 +46,7 @@ public interface IAccountService
     /// <param name="newPassword">The new password.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>The updated account, or <c>null</c> when the user does not exist.</returns>
-    /// <exception cref="ArgumentException">
+    /// <exception cref="BadRequestException">
     /// Thrown when the current password is incorrect or the new password is invalid.
     /// </exception>
     Task<UserAccountResponse?> UpdatePasswordAsync(Guid userId, string currentPassword, string newPassword, CancellationToken cancellationToken = default);

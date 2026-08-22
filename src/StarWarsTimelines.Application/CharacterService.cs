@@ -46,7 +46,7 @@ public sealed class CharacterService : ICharacterService
     /// <inheritdoc />
     public async Task<CharacterResponse> CreateAsync(CreateCharacterRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
         ValidateYearRanges(
             request.YearOfBirthEarliest,
             request.YearOfBirthLatest,
@@ -85,12 +85,12 @@ public sealed class CharacterService : ICharacterService
             return null;
         }
 
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Name);
+        RequireName(request.Name);
 
         if ((request.YearOfBirthEarliest is int) != (request.YearOfBirthLatest is int) ||
             (request.YearOfDeathEarliest is int) != (request.YearOfDeathLatest is int))
         {
-            throw new ArgumentException("Birth and death year ranges must be provided as both an earliest and a latest value.", nameof(request));
+            throw new BadRequestException("Birth and death year ranges must be provided as both an earliest and a latest value.", nameof(request));
         }
 
         ValidateYearRanges(
@@ -149,17 +149,17 @@ public sealed class CharacterService : ICharacterService
     /// <param name="planetBornOnId">The location identifier to validate, or <c>null</c> for an unknown planet.</param>
     /// <param name="speciesId">The species identifier to validate, or <c>null</c> for an unknown species.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">Thrown when a referenced location or species does not exist.</exception>
+    /// <exception cref="EntityNotFoundException">Thrown when a referenced location or species does not exist.</exception>
     private async Task ValidateReferencesAsync(Guid? planetBornOnId, Guid? speciesId, CancellationToken cancellationToken)
     {
         if (planetBornOnId is Guid planetId && await _locations.GetByIdAsync(planetId, cancellationToken) is null)
         {
-            throw new ArgumentException($"Location '{planetId}' does not exist.", nameof(planetBornOnId));
+            throw new EntityNotFoundException($"Location '{planetId}' does not exist.", nameof(planetBornOnId));
         }
 
         if (speciesId is Guid id && await _species.GetByIdAsync(id, cancellationToken) is null)
         {
-            throw new ArgumentException($"Species '{id}' does not exist.", nameof(speciesId));
+            throw new EntityNotFoundException($"Species '{id}' does not exist.", nameof(speciesId));
         }
     }
 
@@ -170,19 +170,32 @@ public sealed class CharacterService : ICharacterService
     /// <param name="birthLatest">The latest birth year, or <c>null</c> when unknown.</param>
     /// <param name="deathEarliest">The earliest death year, or <c>null</c> when unknown.</param>
     /// <param name="deathLatest">The latest death year, or <c>null</c> when unknown.</param>
-    /// <exception cref="ArgumentException">
+    /// <exception cref="BadRequestException">
     /// Thrown when an earliest year is chronologically after its latest year.
     /// </exception>
     private static void ValidateYearRanges(int? birthEarliest, int? birthLatest, int? deathEarliest, int? deathLatest)
     {
         if (birthEarliest is int b1 && birthLatest is int b2 && b1 > b2)
         {
-            throw new ArgumentException("The earliest birth year must not be after the latest birth year.", nameof(birthEarliest));
+            throw new BadRequestException("The earliest birth year must not be after the latest birth year.", nameof(birthEarliest));
         }
 
         if (deathEarliest is int d1 && deathLatest is int d2 && d1 > d2)
         {
-            throw new ArgumentException("The earliest death year must not be after the latest death year.", nameof(deathEarliest));
+            throw new BadRequestException("The earliest death year must not be after the latest death year.", nameof(deathEarliest));
+        }
+    }
+
+    /// <summary>
+    /// Ensures a character name was provided.
+    /// </summary>
+    /// <param name="name">The name to validate.</param>
+    /// <exception cref="BadRequestException">Thrown when the name is missing or blank.</exception>
+    private static void RequireName(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new BadRequestException("A name is required.", nameof(name));
         }
     }
 }

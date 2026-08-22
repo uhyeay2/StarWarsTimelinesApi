@@ -41,7 +41,7 @@ public sealed class SourceMaterialService : ISourceMaterialService
     /// <inheritdoc />
     public async Task<SourceMaterialResponse> CreateAsync(CreateSourceMaterialRequest request, CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(request.Title);
+        RequireTitle(request.Title);
 
         var item = new SourceMaterial
         {
@@ -68,7 +68,7 @@ public sealed class SourceMaterialService : ISourceMaterialService
 
         if (request.Title is not null)
         {
-            ArgumentException.ThrowIfNullOrWhiteSpace(request.Title);
+            RequireTitle(request.Title);
             item.Title = request.Title.Trim();
         }
 
@@ -106,5 +106,18 @@ public sealed class SourceMaterialService : ISourceMaterialService
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return true;
+    }
+
+    /// <summary>
+    /// Ensures a source material title was provided.
+    /// </summary>
+    /// <param name="title">The title to validate.</param>
+    /// <exception cref="BadRequestException">Thrown when the title is missing or blank.</exception>
+    private static void RequireTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new BadRequestException("A title is required.", nameof(title));
+        }
     }
 }

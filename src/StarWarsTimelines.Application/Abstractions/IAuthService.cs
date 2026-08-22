@@ -23,9 +23,8 @@ public interface IAuthService
     /// <param name="request">The registration payload.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>A <see cref="RegisterResponse"/> describing the created account.</returns>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the username or email is already registered, or the payload is invalid.
-    /// </exception>
+    /// <exception cref="EntityAlreadyExistsException">Thrown when the username or email is already registered.</exception>
+    /// <exception cref="BadRequestException">Thrown when the payload is invalid.</exception>
     Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -33,9 +32,8 @@ public interface IAuthService
     /// </summary>
     /// <param name="token">The verification token emailed to the user.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
-    /// <exception cref="ArgumentException">
-    /// Thrown when the token is missing, unknown, or expired.
-    /// </exception>
+    /// <exception cref="BadRequestException">Thrown when the token is missing.</exception>
+    /// <exception cref="InvalidTokenException">Thrown when the token is unknown or expired.</exception>
     Task VerifyEmailAsync(string token, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -46,7 +44,7 @@ public interface IAuthService
     /// <remarks>
     /// Returns without sending when no matching account exists or the account is already verified.
     /// </remarks>
-    /// <exception cref="ArgumentException">Thrown when the identifier is blank.</exception>
+    /// <exception cref="BadRequestException">Thrown when the identifier is blank.</exception>
     Task ResendVerificationEmailAsync(string usernameOrEmail, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -56,6 +54,7 @@ public interface IAuthService
     /// <param name="refreshToken">The opaque refresh token string.</param>
     /// <param name="cancellationToken">A token that can be used to cancel the operation.</param>
     /// <returns>An <see cref="AuthResponse"/> carrying the new access token, refresh token, and user.</returns>
-    /// <exception cref="ArgumentException">Thrown when the refresh token is missing, unknown, revoked, or expired.</exception>
+    /// <exception cref="BadRequestException">Thrown when the refresh token is missing.</exception>
+    /// <exception cref="InvalidTokenException">Thrown when the refresh token is unknown, revoked, or expired.</exception>
     Task<AuthResponse> RefreshAsync(string refreshToken, CancellationToken cancellationToken = default);
 }

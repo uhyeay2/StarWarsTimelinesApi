@@ -100,7 +100,7 @@ public sealed class SpeciesServiceTests
     [InlineData("   ")]
     public async Task CreateAsync_WithInvalidName_Throws(string? name)
     {
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(new CreateSpeciesRequest(name!)));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.CreateAsync(new CreateSpeciesRequest(name!)));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<Species>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -111,7 +111,7 @@ public sealed class SpeciesServiceTests
         var planetId = Guid.NewGuid();
         _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.CreateAsync(new CreateSpeciesRequest("Mirialan", planetId)));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.CreateAsync(new CreateSpeciesRequest("Mirialan", planetId)));
 
         _repository.Verify(x => x.AddAsync(It.IsAny<Species>(), It.IsAny<CancellationToken>()), Times.Never);
         _unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
@@ -177,7 +177,7 @@ public sealed class SpeciesServiceTests
             .ReturnsAsync(item);
         _locations.Setup(x => x.GetByIdAsync(planetId, It.IsAny<CancellationToken>())).ReturnsAsync((Location?)null);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("Mirialan", planetId)));
+        await Assert.ThrowsAsync<EntityNotFoundException>(() => _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("Mirialan", planetId)));
 
         _repository.Verify(x => x.Update(It.IsAny<Species>()), Times.Never);
     }
@@ -190,7 +190,7 @@ public sealed class SpeciesServiceTests
             .Setup(x => x.GetByIdAsync(item.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(item);
 
-        await Assert.ThrowsAnyAsync<ArgumentException>(() => _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("   ", null)));
+        await Assert.ThrowsAsync<BadRequestException>(() => _service.UpdateAsync(item.Id, new UpdateSpeciesRequest("   ", null)));
 
         _repository.Verify(x => x.Update(It.IsAny<Species>()), Times.Never);
     }

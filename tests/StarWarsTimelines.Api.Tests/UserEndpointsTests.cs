@@ -137,7 +137,7 @@ public sealed class UserEndpointsTests : ApiTestBase
     }
 
     [Fact]
-    public async Task UpdateEmail_WithDuplicateEmail_ReturnsBadRequest()
+    public async Task UpdateEmail_WithDuplicateEmail_ReturnsConflict()
     {
         var (_, first) = await RegisterVerifiedUserAsync("duchess", "duchess12");
         var (secondId, second) = await RegisterVerifiedUserAsync("pre_vizsla", "pre1234567");
@@ -146,7 +146,7 @@ public sealed class UserEndpointsTests : ApiTestBase
             $"/api/users/{secondId}/email",
             new UpdateEmailRequest("duchess@example.com"));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Contains("already registered", await ReadProblemDetailAsync(response));
     }
 
